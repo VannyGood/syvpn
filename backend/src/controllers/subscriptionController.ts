@@ -11,6 +11,10 @@ function addDays(date: Date, days: number) {
   return d;
 }
 
+function marzbanUsernameForSubscription(telegramId: string, subscriptionId: string) {
+  return `tg_${telegramId}_${subscriptionId.slice(0, 8)}`;
+}
+
 export const subscribe = asyncHandler(async (req, res) => {
   if (!req.user) throw new HttpError(401, 'Unauthorized');
 
@@ -48,7 +52,7 @@ export const subscribe = asyncHandler(async (req, res) => {
   });
 
   // Create Marzban user + fetch config
-  const marzbanUsername = `tg_${user.telegramId}_${sub.id.slice(0, 8)}`;
+  const marzbanUsername = marzbanUsernameForSubscription(user.telegramId, sub.id);
   const created = await marzban.createUser({ username: marzbanUsername, expireAt: expiresAt });
 
   const updated = await prisma.subscription.update({
@@ -88,15 +92,45 @@ export const getConfig = asyncHandler(async (req, res) => {
   if (!req.user) throw new HttpError(401, 'Unauthorized');
 
   const sub = await prisma.subscription.findFirst({
-    where: { userId: req.user.sub, status: 'active', expiresAt: { gt: new Date() } },
+    where: { userId: req.user.sub, status: 'active' },
     orderBy: { createdAt: 'desc' },
+    include: { user: true },
   });
 
-  if (!sub?.configUrl) throw new HttpError(404, 'No active subscription/config');
+  if (!sub?.configUrl || !sub.user) throw new HttpError(404, 'No active subscription/config');
+
+  const mbUser = marzbanUsernameForSubscription(sub.user.telegramId, sub.id);
+  let remote = await marzban.fetchUserRemote(mbUser);
+  if (!remote && sub.marzbanUserId && sub.marzbanUserId !== mbUser) {
+    remote = await marzban.fetchUserRemote(sub.marzbanUserId);
+  }
+
+  let expiresAt = sub.expiresAt;
+  let configUrl = sub.configUrl;
+
+  if (remote) {
+    const driftMs = Math.abs(sub.expiresAt.getTime() - remote.expireAt.getTime());
+    const urlChanged =
+      remote.subscriptionUrl && remote.subscriptionUrl !== sub.configUrl ? remote.subscriptionUrl : undefined;
+
+    if (driftMs > 2000 || urlChanged) {
+      const updated = await prisma.subscription.update({
+        where: { id: sub.id },
+        data: {
+          expiresAt: remote.expireAt,
+          ...(urlChanged ? { configUrl: urlChanged } : {}),
+        },
+      });
+      expiresAt = updated.expiresAt;
+      configUrl = updated.configUrl ?? configUrl;
+    }
+  }
+
+  if (expiresAt <= new Date()) throw new HttpError(404, 'No active subscription/config');
 
   res.json({
-    config_url: sub.configUrl,
-    expires_at: sub.expiresAt,
+    config_url: configUrl,
+    expires_at: expiresAt,
     plan_type: sub.planType,
   });
 });

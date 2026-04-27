@@ -137,6 +137,32 @@ export class MarzbanService {
       );
     }
   }
+
+  /**
+   * Reads current expiry (and subscription URL) from Marzban so our DB stays aligned when you edit users in the Marzban panel.
+   * Uses GET /api/user/{username}. Returns null if the request fails or expiry cannot be parsed.
+   */
+  async fetchUserRemote(username: string): Promise<{ expireAt: Date; subscriptionUrl?: string } | null> {
+    try {
+      const http = await this.authed();
+      const { data } = await http.get(`/api/user/${encodeURIComponent(username)}`);
+      const expireRaw = data?.expire ?? data?.expires_at;
+      if (expireRaw === undefined || expireRaw === null || expireRaw === '') {
+        return null;
+      }
+      const sec = typeof expireRaw === 'number' ? expireRaw : Number(expireRaw);
+      if (!Number.isFinite(sec) || sec <= 0) {
+        return null;
+      }
+      const expireAt = new Date(sec * 1000);
+      const subscriptionUrlRaw = data?.subscription_url ?? data?.subscriptionUrl ?? data?.link;
+      const subscriptionUrl =
+        typeof subscriptionUrlRaw === 'string' && subscriptionUrlRaw.length > 0 ? subscriptionUrlRaw : undefined;
+      return { expireAt, subscriptionUrl };
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const marzban = new MarzbanService();
