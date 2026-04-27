@@ -25,9 +25,9 @@ function formatDate(iso: string) {
 }
 
 const depositAddresses: Record<PaymentMethod, { address: string; label: string }> = {
-  ton: { address: 'UQBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', label: 'TON Wallet' },
-  trc20: { address: 'TXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', label: 'TRC20 (USDT)' },
-  whish: { address: 'SY_VPN_WHISH', label: 'Whish Money' },
+  ton: { address: 'UQAY0pUwY8fkhDqyqM8Ac2MKg7go4QLiqo1OtP836vBjmLbi', label: 'TON Wallet' },
+  trc20: { address: 'TMVy2tQnWfJcatM1ttVrRypa1TuGu6VxQK', label: 'TRC20 (USDT)' },
+  whish: { address: '', label: 'Whish Money' },
 };
 
 export function WalletView({ balance, onShowToast }: WalletViewProps) {
@@ -65,6 +65,11 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
   const startPaymentProcessing = () => {
     if (paymentProcessing) {
       onShowToast('Already submitting your payment…', 'info');
+      return;
+    }
+
+    if (selectedMethod === 'whish') {
+      onShowToast('Whish is coming soon.', 'info');
       return;
     }
 
@@ -136,15 +141,23 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
         </h3>
         <div className="grid grid-cols-3 gap-2">
           {([
-            { id: 'ton' as PaymentMethod, label: 'TON', iconSrc: toncoinIcon },
-            { id: 'trc20' as PaymentMethod, label: 'TRC20', iconSrc: trc20Icon },
-            { id: 'whish' as PaymentMethod, label: 'Whish', iconSrc: whishIcon },
+            { id: 'ton' as PaymentMethod, label: 'TON', iconSrc: toncoinIcon, disabled: false },
+            { id: 'trc20' as PaymentMethod, label: 'TRC20', iconSrc: trc20Icon, disabled: false },
+            { id: 'whish' as PaymentMethod, label: 'Whish', iconSrc: whishIcon, disabled: true },
           ]).map((method) => (
             <GlassCard
               key={method.id}
-              onClick={() => setSelectedMethod(selectedMethod === method.id ? null : method.id)}
+              onClick={
+                method.disabled
+                  ? () => onShowToast('Whish is coming soon.', 'info')
+                  : () => setSelectedMethod(selectedMethod === method.id ? null : method.id)
+              }
               className={`text-center transition-all duration-200 ${
-                selectedMethod === method.id ? '!border-neon-blue/40 glow-blue' : ''
+                method.disabled
+                  ? 'opacity-40 pointer-events-none'
+                  : selectedMethod === method.id
+                    ? '!border-neon-blue/40 glow-blue'
+                    : ''
               }`}
             >
               <img
@@ -154,6 +167,9 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                 loading="lazy"
               />
               <p className="text-xs font-semibold text-white">{method.label}</p>
+              {method.disabled && (
+                <p className="text-[10px] text-gray-500 mt-0.5">Coming soon</p>
+              )}
             </GlassCard>
           ))}
         </div>
