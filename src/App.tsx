@@ -179,6 +179,20 @@ function App() {
     setActiveTab(tab);
   }, []);
 
+  // Keep wallet balance fresh when opening the wallet tab.
+  useEffect(() => {
+    if (activeTab !== 'wallet') return;
+    let cancelled = false;
+    void getWallet()
+      .then((w) => {
+        if (!cancelled) setBalance(Number(w.balance ?? 0));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab]);
+
   const pageVariants = {
     initial: { opacity: 0, y: 8 },
     animate: { opacity: 1, y: 0 },

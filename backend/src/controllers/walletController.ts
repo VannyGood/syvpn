@@ -6,22 +6,25 @@ import { HttpError } from '../utils/httpError.js';
 export const getWallet = asyncHandler(async (req, res) => {
   if (!req.user) throw new HttpError(401, 'Unauthorized');
 
-  // Balance = paid deposits - paid purchases (USD)
-  const [deposits, purchases] = await Promise.all([
-    prisma.transaction.aggregate({
-      where: { userId: req.user.sub, status: 'paid', kind: 'deposit' },
-      _sum: { amount: true },
-    }),
-    prisma.transaction.aggregate({
-      where: { userId: req.user.sub, status: 'paid', kind: 'purchase' },
-      _sum: { amount: true },
-    }),
-  ]);
+  // Compute in Postgres to avoid JS float/Decimal edge cases.
+  const rows = await prisma.$queryRaw<{ balance: any }[]>`
+    SELECT
+      COALESCE(
+        SUM(
+          CASE
+            WHEN status = 'paid' AND kind = 'deposit' THEN amount
+            WHEN status = 'paid' AND kind = 'purchase' THEN -amount
+            ELSE 0
+          END
+        ),
+        0
+      )::text AS balance
+    FROM transactions
+    WHERE user_id = ${req.user.sub}
+  `;
 
-  const depositSum = deposits._sum.amount ?? 0;
-  const purchaseSum = purchases._sum.amount ?? 0;
-  const balance = Number(depositSum) - Number(purchaseSum);
-  res.json({ balance });
+  const balanceStr = rows?.[0]?.balance ?? '0';
+  res.json({ balance: Number(balanceStr) });
 });
 
 export const listTransactions = asyncHandler(async (req, res) => {
