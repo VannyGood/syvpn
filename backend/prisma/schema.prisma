@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionPlanType {
+  monthly
+  yearly
+}
+
+enum SubscriptionStatus {
+  active
+  inactive
+}
+
+enum TransactionCurrency {
+  TON
+  TRC20
+  WHISH
+}
+
+enum TransactionStatus {
+  pending
+  paid
+}
+
+model User {
+  id         String         @id @default(uuid())
+  telegramId String         @unique @map("telegram_id")
+  username   String?
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  subscriptions Subscription[]
+  transactions  Transaction[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id            String             @id @default(uuid())
+  userId        String             @map("user_id")
+  planType      SubscriptionPlanType @map("plan_type")
+  status        SubscriptionStatus @default(inactive)
+  expiresAt     DateTime           @map("expires_at")
+  marzbanUserId String?            @map("marzban_user_id")
+  configUrl     String?            @map("config_url")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("subscriptions")
+}
+
+model Transaction {
+  id        String             @id @default(uuid())
+  userId    String             @map("user_id")
+  amount    Decimal            @db.Decimal(12, 2)
+  currency  TransactionCurrency
+  status    TransactionStatus  @default(pending)
+  approvalToken String         @unique @map("approval_token")
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("transactions")
+}
+
