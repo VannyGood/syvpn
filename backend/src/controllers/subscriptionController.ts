@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { prisma } from '../config/prisma.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
@@ -18,6 +19,20 @@ export const subscribe = asyncHandler(async (req, res) => {
 
   const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
   if (!user) throw new HttpError(404, 'User not found');
+
+  // Wallet check (paid deposits - paid purchases)
+  const [deposits, purchases] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: { userId: user.id, status: 'paid', kind: 'deposit' },
+      _sum: { amount: true },
+    }),
+    prisma.transaction.aggregate({
+      where: { userId: user.id, status: 'paid', kind: 'purchase' },
+      _sum: { amount: true },
+    }),
+  ]);
+  const balance = Number(deposits._sum.amount ?? 0) - Number(purchases._sum.amount ?? 0);
+  if (balance < plan.priceUsd) throw new HttpError(400, 'Insufficient wallet balance');
 
   const now = new Date();
   const expiresAt = addDays(now, plan.days);
@@ -42,6 +57,18 @@ export const subscribe = asyncHandler(async (req, res) => {
       status: 'active',
       marzbanUserId: created.marzbanUserId,
       configUrl: created.subscriptionUrl,
+    },
+  });
+
+  // Deduct wallet with a paid purchase transaction
+  await prisma.transaction.create({
+    data: {
+      userId: user.id,
+      amount: plan.priceUsd,
+      currency: 'USD',
+      kind: 'purchase',
+      status: 'paid',
+      approvalToken: crypto.randomUUID(), // unique token
     },
   });
 

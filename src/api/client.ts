@@ -77,9 +77,26 @@ export async function getConfig() {
   }>('GET', '/config');
 }
 
+export async function getWallet() {
+  return request<{ balance: number }>('GET', '/wallet');
+}
+
+export type WalletTransaction = {
+  id: string;
+  kind: 'deposit' | 'purchase';
+  status: 'pending' | 'paid' | 'declined';
+  amount: string;
+  currency: 'TON' | 'TRC20' | 'WHISH' | 'USD';
+  created_at: string;
+};
+
+export async function getWalletTransactions() {
+  return request<{ transactions: WalletTransaction[] }>('GET', '/wallet/transactions');
+}
+
 export async function iPaid(input: { amount: number; currency: 'TON' | 'TRC20' | 'WHISH' }) {
   return request<{
-    transaction: { id: string; status: 'pending' | 'paid' | 'declined'; amount: string; currency: 'TON' | 'TRC20' | 'WHISH' };
+    transaction: { id: string; status: 'pending' | 'paid' | 'declined'; amount: string; currency: 'TON' | 'TRC20' | 'WHISH' | 'USD' };
   }>('POST', '/payments/i-paid', input);
 }
 

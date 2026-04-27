@@ -10,7 +10,7 @@ import { WalletView } from './views/WalletView';
 import { ConfigView } from './views/ConfigView';
 import { ProfileView } from './views/ProfileView';
 import './index.css';
-import { getConfig, subscribe, telegramAuth } from './api/client';
+import { getConfig, getWallet, getWalletTransactions, subscribe, telegramAuth } from './api/client';
 
 const planPrices: Record<string, { price: number; days: number; name: string }> = {
   '1month': { price: 2.99, days: 30, name: '1 Month' },
@@ -48,12 +48,15 @@ function getTelegramUser(): { username?: string; first_name?: string } | undefin
 function App() {
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [balance, setBalance] = useState(12.0);
+  const [balance, setBalance] = useState(0);
   const [daysLeft, setDaysLeft] = useState(0);
   const [planName, setPlanName] = useState('');
   const [username, setUsername] = useState('user');
   const [firstName, setFirstName] = useState('');
   const [configUrl, setConfigUrl] = useState<string | undefined>(undefined);
+  // Wallet txs are fetched to keep balance authoritative after purchases/deposits.
+  // WalletView will fetch its own list for now; we keep this for future wiring.
+  const [, setWalletTxs] = useState<Awaited<ReturnType<typeof getWalletTransactions>>['transactions']>([]);
 
   // Toast state
   const [toastVisible, setToastVisible] = useState(false);
@@ -102,6 +105,15 @@ function App() {
       }
 
       try {
+        const w = await getWallet();
+        if (!cancelled) setBalance(Number(w.balance ?? 0));
+        const txResp = await getWalletTransactions();
+        if (!cancelled) setWalletTxs(txResp.transactions);
+      } catch {
+        // ok
+      }
+
+      try {
         const cfg = await getConfig();
         if (cancelled) return;
         setIsSubscribed(true);
@@ -146,7 +158,13 @@ function App() {
       const expiresAt = resp.subscription.expires_at;
       const url = resp.subscription.config_url ?? undefined;
 
-      setBalance((b) => +(b - plan.price).toFixed(2));
+      // Refresh wallet from backend (authoritative).
+      try {
+        const w = await getWallet();
+        setBalance(Number(w.balance ?? 0));
+        const txResp = await getWalletTransactions();
+        setWalletTxs(txResp.transactions);
+      } catch {}
       setIsSubscribed(true);
       setConfigUrl(url);
       setDaysLeft(daysUntil(expiresAt));

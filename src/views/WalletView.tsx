@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, Plus, ArrowUpRight, ArrowDownLeft, Copy } from 'lucide-react';
 import { GlassCard } from '../components/GlassCard';
 import { GlowButton } from '../components/GlowButton';
 import { copyText } from '../utils/copyText';
-import { iPaid } from '../api/client';
+import { getWalletTransactions, iPaid, type WalletTransaction } from '../api/client';
 import toncoinIcon from '../assets/toncoin.png';
 import trc20Icon from '../assets/trc20.png';
 import whishIcon from '../assets/whish.jpg';
@@ -16,11 +16,13 @@ interface WalletViewProps {
 
 type PaymentMethod = 'ton' | 'trc20' | 'whish';
 
-const mockTransactions = [
-  { id: 1, type: 'deposit', method: 'TON', amount: 5.0, date: '2025-04-20', status: 'completed' },
-  { id: 2, type: 'purchase', method: 'Plan', amount: -3.0, date: '2025-04-18', status: 'completed' },
-  { id: 3, type: 'deposit', method: 'TRC20', amount: 10.0, date: '2025-04-15', status: 'completed' },
-];
+function formatDate(iso: string) {
+  try {
+    return new Date(iso).toISOString().slice(0, 10);
+  } catch {
+    return iso;
+  }
+}
 
 const depositAddresses: Record<PaymentMethod, { address: string; label: string }> = {
   ton: { address: 'UQBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', label: 'TON Wallet' },
@@ -34,6 +36,19 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [processingSecondsLeft, setProcessingSecondsLeft] = useState(0);
   const [amountInput, setAmountInput] = useState('3');
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getWalletTransactions()
+      .then((r) => {
+        if (!cancelled) setTransactions(r.transactions);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCopy = async (method: PaymentMethod, text: string) => {
     try {
@@ -78,6 +93,10 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
       .then(() => {
         setPaidActionVisible(false);
         onShowToast('Payment submitted. Waiting for admin approval.', 'success');
+        return getWalletTransactions();
+      })
+      .then((r) => {
+        if (r) setTransactions(r.transactions);
       })
       .catch((e) => {
         onShowToast((e as Error).message || 'Failed to submit payment', 'error');
@@ -219,7 +238,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
       <div>
         <h3 className="text-sm font-semibold text-white mb-3">Recent Activity</h3>
         <div className="space-y-2">
-          {mockTransactions.map((tx, i) => (
+          {transactions.map((tx, i) => (
             <motion.div
               key={tx.id}
               initial={{ opacity: 0, x: -10 }}
@@ -229,26 +248,35 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
               <GlassCard className="!p-3">
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                    tx.type === 'deposit' ? 'bg-neon-green/10' : 'bg-neon-pink/10'
+                    tx.kind === 'deposit' ? 'bg-neon-green/10' : 'bg-neon-pink/10'
                   }`}>
-                    {tx.type === 'deposit'
+                    {tx.kind === 'deposit'
                       ? <ArrowDownLeft className="w-4 h-4 text-neon-green" />
                       : <ArrowUpRight className="w-4 h-4 text-neon-pink" />
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white">{tx.method}</p>
-                    <p className="text-[11px] text-gray-500">{tx.date}</p>
+                    <p className="text-sm font-medium text-white">
+                      {tx.kind === 'deposit' ? tx.currency : 'Plan purchase'}
+                      {' '}
+                      <span className="text-[11px] text-gray-500">({tx.status})</span>
+                    </p>
+                    <p className="text-[11px] text-gray-500">{formatDate(tx.created_at)}</p>
                   </div>
                   <span className={`text-sm font-semibold ${
-                    tx.amount >= 0 ? 'text-neon-green' : 'text-neon-pink'
+                    tx.kind === 'deposit' ? 'text-neon-green' : 'text-neon-pink'
                   }`}>
-                    {tx.amount >= 0 ? '+' : ''}${Math.abs(tx.amount).toFixed(2)}
+                    {tx.kind === 'deposit' ? '+' : '-'}${Number(tx.amount).toFixed(2)}
                   </span>
                 </div>
               </GlassCard>
             </motion.div>
           ))}
+          {transactions.length === 0 && (
+            <GlassCard className="!p-3">
+              <p className="text-[11px] text-gray-500 text-center">No transactions yet.</p>
+            </GlassCard>
+          )}
         </div>
       </div>
     </div>

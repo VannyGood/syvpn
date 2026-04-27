@@ -6,14 +6,43 @@ import { HttpError } from '../utils/httpError.js';
 export const getWallet = asyncHandler(async (req, res) => {
   if (!req.user) throw new HttpError(401, 'Unauthorized');
 
-  // Mock: balance is sum(paid) - sum(spent). We only track deposits for now.
-  const paid = await prisma.transaction.aggregate({
-    where: { userId: req.user.sub, status: 'paid' },
-    _sum: { amount: true },
+  // Balance = paid deposits - paid purchases (USD)
+  const [deposits, purchases] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: { userId: req.user.sub, status: 'paid', kind: 'deposit' },
+      _sum: { amount: true },
+    }),
+    prisma.transaction.aggregate({
+      where: { userId: req.user.sub, status: 'paid', kind: 'purchase' },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const depositSum = deposits._sum.amount ?? 0;
+  const purchaseSum = purchases._sum.amount ?? 0;
+  const balance = Number(depositSum) - Number(purchaseSum);
+  res.json({ balance });
+});
+
+export const listTransactions = asyncHandler(async (req, res) => {
+  if (!req.user) throw new HttpError(401, 'Unauthorized');
+
+  const txs = await prisma.transaction.findMany({
+    where: { userId: req.user.sub },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
   });
 
-  const balance = paid._sum.amount ?? 0;
-  res.json({ balance });
+  res.json({
+    transactions: txs.map((t) => ({
+      id: t.id,
+      kind: t.kind,
+      status: t.status,
+      amount: String(t.amount),
+      currency: t.currency,
+      created_at: t.createdAt,
+    })),
+  });
 });
 
 export const addFundsMock = asyncHandler(async (req, res) => {
@@ -29,6 +58,7 @@ export const addFundsMock = asyncHandler(async (req, res) => {
       userId: req.user.sub,
       amount,
       currency: currency as 'TON' | 'TRC20' | 'WHISH',
+      kind: 'deposit',
       status: 'pending',
       approvalToken: crypto.randomUUID(),
     },

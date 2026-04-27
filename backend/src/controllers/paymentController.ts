@@ -27,6 +27,7 @@ export const iPaid = asyncHandler(async (req, res) => {
       userId: req.user.sub,
       amount,
       currency: currency as 'TON' | 'TRC20' | 'WHISH',
+      kind: 'deposit',
       status: 'pending',
       approvalToken,
     },

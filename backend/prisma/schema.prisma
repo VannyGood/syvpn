@@ -21,6 +21,12 @@ enum TransactionCurrency {
   TON
   TRC20
   WHISH
+  USD
+}
+
+enum TransactionKind {
+  deposit
+  purchase
 }
 
 enum TransactionStatus {
@@ -63,6 +69,7 @@ model Transaction {
   userId    String             @map("user_id")
   amount    Decimal            @db.Decimal(12, 2)
   currency  TransactionCurrency
+  kind      TransactionKind    @default(deposit)
   status    TransactionStatus  @default(pending)
   approvalToken String         @unique @map("approval_token")
   createdAt DateTime           @default(now()) @map("created_at")
