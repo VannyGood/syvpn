@@ -36,6 +36,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [processingSecondsLeft, setProcessingSecondsLeft] = useState(0);
   const [amountInput, setAmountInput] = useState('3');
+  const [depositAgreed, setDepositAgreed] = useState(false);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
 
   useEffect(() => {
@@ -150,7 +151,12 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
               onClick={
                 method.disabled
                   ? () => onShowToast('Whish is coming soon.', 'info')
-                  : () => setSelectedMethod(selectedMethod === method.id ? null : method.id)
+                  : () => {
+                    const next = selectedMethod === method.id ? null : method.id;
+                    setSelectedMethod(next);
+                    setDepositAgreed(false);
+                    setPaidActionVisible(false);
+                  }
               }
               className={`text-center transition-all duration-200 ${
                 method.disabled
@@ -175,7 +181,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
         </div>
       </div>
 
-      {/* Deposit Address */}
+      {/* Deposit Setup */}
       <AnimatePresence>
         {selectedMethod && (
           <motion.div
@@ -186,21 +192,6 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
           >
             <GlassCard glow>
               <div className="space-y-3">
-                <p className="text-xs font-medium text-gray-400">
-                  Send {depositAddresses[selectedMethod].label} to:
-                </p>
-                <div className="flex items-center gap-2 bg-dark-900/50 rounded-xl p-3">
-                  <code className="text-xs text-neon-blue flex-1 break-all font-mono">
-                    {depositAddresses[selectedMethod].address}
-                  </code>
-                  <button
-                    onClick={() => void handleCopy(selectedMethod, depositAddresses[selectedMethod].address)}
-                    className="p-2 rounded-lg bg-neon-blue/10 hover:bg-neon-blue/20 transition-colors shrink-0"
-                  >
-                    <Copy className="w-3.5 h-3.5 text-neon-blue" />
-                  </button>
-                </div>
-
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-400">Amount (USD)</label>
                   <input
@@ -212,28 +203,76 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                   />
                 </div>
 
-                {paidActionVisible && (
+                {!depositAgreed ? (
+                  <GlowButton
+                    id="deposit-agree-btn"
+                    fullWidth
+                    size="lg"
+                    variant="secondary"
+                    onClick={() => {
+                      const amount = Number(amountInput);
+                      if (!Number.isFinite(amount) || amount <= 0) {
+                        onShowToast('Enter a valid amount (e.g. 3).', 'error');
+                        return;
+                      }
+                      setDepositAgreed(true);
+                      onShowToast('Now copy the wallet address and send the payment.', 'info');
+                    }}
+                  >
+                    I agree
+                  </GlowButton>
+                ) : (
                   <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-400">
+                      Send {depositAddresses[selectedMethod].label} to:
+                    </p>
+                    <div className="flex items-center gap-2 bg-dark-900/50 rounded-xl p-3">
+                      <code className="text-xs text-neon-blue flex-1 break-all font-mono">
+                        {depositAddresses[selectedMethod].address}
+                      </code>
+                      <button
+                        onClick={() => void handleCopy(selectedMethod, depositAddresses[selectedMethod].address)}
+                        className="p-2 rounded-lg bg-neon-blue/10 hover:bg-neon-blue/20 transition-colors shrink-0"
+                      >
+                        <Copy className="w-3.5 h-3.5 text-neon-blue" />
+                      </button>
+                    </div>
+
+                    {paidActionVisible && (
+                      <GlowButton
+                        id="i-have-paid-btn"
+                        fullWidth
+                        size="lg"
+                        onClick={startPaymentProcessing}
+                        onPointerDown={startPaymentProcessing}
+                        onTouchStart={startPaymentProcessing}
+                        disabled={paymentProcessing}
+                      >
+                        {paymentProcessing ? (
+                          <>
+                            <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                            Processing…
+                          </>
+                        ) : (
+                          'I have paid'
+                        )}
+                      </GlowButton>
+                    )}
+
                     <GlowButton
-                      id="i-have-paid-btn"
+                      id="deposit-reset-btn"
                       fullWidth
-                      size="lg"
-                      onClick={startPaymentProcessing}
-                      onPointerDown={startPaymentProcessing}
-                      onTouchStart={startPaymentProcessing}
-                      disabled={paymentProcessing}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setDepositAgreed(false);
+                        setPaidActionVisible(false);
+                      }}
                     >
-                      {paymentProcessing ? (
-                        <>
-                          <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                          Processing…
-                        </>
-                      ) : (
-                        'I have paid'
-                      )}
+                      Change amount
                     </GlowButton>
 
-                    {paymentProcessing && (
+                    {paymentProcessing && paidActionVisible && (
                       <p className="text-[11px] text-gray-500 text-center">
                         Checking payment… {Math.floor(processingSecondsLeft / 60)}:
                         {String(processingSecondsLeft % 60).padStart(2, '0')}
