@@ -45,7 +45,36 @@ function getTelegramUser(): { username?: string; first_name?: string } | undefin
   return undefined;
 }
 
+function BrowserLanding() {
+  const botUrl = 'https://t.me/SenYuvpn_bot';
+  return (
+    <div className="relative min-h-dvh bg-dark-900 bg-grid">
+      <div className="fixed inset-0 bg-radial-glow pointer-events-none z-0" />
+      <main className="relative z-10 px-4 pt-10 pb-10 max-w-md mx-auto">
+        <div className="glass rounded-2xl p-6 text-center space-y-4">
+          <h1 className="text-2xl font-bold text-white">Welcome to SY VPN</h1>
+          <p className="text-sm text-gray-400">
+            This app works inside Telegram. Open it from Telegram to continue.
+          </p>
+          <a
+            href={botUrl}
+            className="btn-neon-gradient text-white shadow-lg shadow-neon-blue/20 hover:shadow-neon-blue/40 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold w-full"
+          >
+            Open in Telegram
+          </a>
+          <p className="text-[11px] text-gray-500">
+            If the button doesn’t open Telegram, search for <span className="text-gray-300">@SenYuvpn_bot</span>.
+          </p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 function App() {
+  const isTelegram = Boolean(getTelegramInitData());
+  if (!isTelegram) return <BrowserLanding />;
+
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [balance, setBalance] = useState(0);
