@@ -33,6 +33,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
   const [paidActionVisible, setPaidActionVisible] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [processingSecondsLeft, setProcessingSecondsLeft] = useState(0);
+  const [amountInput, setAmountInput] = useState('3');
 
   const handleCopy = async (method: PaymentMethod, text: string) => {
     try {
@@ -52,6 +53,12 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
       return;
     }
 
+    const amount = Number(amountInput);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      onShowToast('Enter a valid amount (e.g. 3).', 'error');
+      return;
+    }
+
     // Immediate feedback so we can confirm the tap handler fires in mobile WebViews.
     onShowToast('Submitting payment…', 'info');
 
@@ -62,10 +69,6 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
     };
 
     const methodToUse: PaymentMethod = selectedMethod ?? 'ton';
-
-    // For now, we send the user-entered deposit as a fixed amount placeholder.
-    // Next step: tie this to selected plan and show exact amount.
-    const amount = 2.99;
 
     setPaymentProcessing(true);
     setProcessingSecondsLeft(0);
@@ -161,6 +164,17 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                   >
                     <Copy className="w-3.5 h-3.5 text-neon-blue" />
                   </button>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-400">Amount (USD)</label>
+                  <input
+                    inputMode="decimal"
+                    value={amountInput}
+                    onChange={(e) => setAmountInput(e.target.value)}
+                    placeholder="e.g. 3"
+                    className="w-full bg-dark-900/50 rounded-xl px-3 py-2 text-sm text-white border border-white/10 focus:outline-none focus:border-neon-blue/40"
+                  />
                 </div>
 
                 {paidActionVisible && (

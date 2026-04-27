@@ -26,6 +26,7 @@ enum TransactionCurrency {
 enum TransactionStatus {
   pending
   paid
+  declined
 }
 
 model User {

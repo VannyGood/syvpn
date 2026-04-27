@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authJwt } from '../middlewares/authJwt.js';
-import { approveTransaction, iPaid } from '../controllers/paymentController.js';
+import { approveTransaction, declineTransaction, iPaid } from '../controllers/paymentController.js';
 
 export const paymentRoutes = Router();
 
@@ -9,4 +9,5 @@ paymentRoutes.post('/payments/i-paid', authJwt, iPaid);
 
 // Admin approval link (token-based)
 paymentRoutes.get('/admin/transactions/approve', approveTransaction);
+paymentRoutes.get('/admin/transactions/decline', declineTransaction);
 

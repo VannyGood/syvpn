@@ -79,7 +79,7 @@ export async function getConfig() {
 
 export async function iPaid(input: { amount: number; currency: 'TON' | 'TRC20' | 'WHISH' }) {
   return request<{
-    transaction: { id: string; status: 'pending' | 'paid'; amount: string; currency: 'TON' | 'TRC20' | 'WHISH' };
+    transaction: { id: string; status: 'pending' | 'paid' | 'declined'; amount: string; currency: 'TON' | 'TRC20' | 'WHISH' };
   }>('POST', '/payments/i-paid', input);
 }
 

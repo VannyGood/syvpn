@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../config/prisma.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
-import { notifyAdmin } from '../services/telegramNotify.js';
+import { notifyAdmin, notifyUser } from '../services/telegramNotify.js';
 import { env } from '../config/env.js';
 
 export const iPaid = asyncHandler(async (req, res) => {
@@ -33,6 +33,7 @@ export const iPaid = asyncHandler(async (req, res) => {
   });
 
   const approveUrl = `${env.PUBLIC_BASE_URL}/backend/admin/transactions/approve?token=${encodeURIComponent(approvalToken)}`;
+  const declineUrl = `${env.PUBLIC_BASE_URL}/backend/admin/transactions/decline?token=${encodeURIComponent(approvalToken)}`;
 
   await notifyAdmin(
     [
@@ -43,6 +44,7 @@ export const iPaid = asyncHandler(async (req, res) => {
       `Transaction: ${tx.id}`,
       '',
       `Approve: ${approveUrl}`,
+      `Decline: ${declineUrl}`,
     ].join('\n')
   );
 
@@ -63,11 +65,17 @@ export const approveTransaction = asyncHandler(async (req, res) => {
   const token = typeof req.query?.token === 'string' ? req.query.token : '';
   if (!token) throw new HttpError(400, 'Missing token');
 
-  const tx = await prisma.transaction.findUnique({ where: { approvalToken: token } as any });
+  const tx = await prisma.transaction.findUnique({
+    where: { approvalToken: token } as any,
+    include: { user: true },
+  });
   if (!tx) throw new HttpError(404, 'Transaction not found');
 
   if (tx.status === 'paid') {
     return res.json({ ok: true, message: 'Already approved', transaction_id: tx.id });
+  }
+  if (tx.status === 'declined') {
+    return res.json({ ok: true, message: 'Already declined', transaction_id: tx.id });
   }
 
   await prisma.transaction.update({
@@ -75,6 +83,44 @@ export const approveTransaction = asyncHandler(async (req, res) => {
     data: { status: 'paid' },
   });
 
+  // Notify user that their deposit was approved.
+  try {
+    await notifyUser(tx.user.telegramId, `✅ Payment approved\n\nAmount: ${tx.amount} ${tx.currency}\nYour wallet has been credited.`);
+  } catch {}
+
   return res.json({ ok: true, message: 'Approved', transaction_id: tx.id });
+});
+
+export const declineTransaction = asyncHandler(async (req, res) => {
+  const token = typeof req.query?.token === 'string' ? req.query.token : '';
+  if (!token) throw new HttpError(400, 'Missing token');
+
+  const tx = await prisma.transaction.findUnique({
+    where: { approvalToken: token } as any,
+    include: { user: true },
+  });
+  if (!tx) throw new HttpError(404, 'Transaction not found');
+
+  if (tx.status === 'declined') {
+    return res.json({ ok: true, message: 'Already declined', transaction_id: tx.id });
+  }
+  if (tx.status === 'paid') {
+    return res.json({ ok: true, message: 'Already approved (cannot decline)', transaction_id: tx.id });
+  }
+
+  await prisma.transaction.update({
+    where: { id: tx.id },
+    data: { status: 'declined' },
+  });
+
+  // Notify user that their deposit was declined.
+  try {
+    await notifyUser(
+      tx.user.telegramId,
+      `❌ Payment declined\n\nAmount: ${tx.amount} ${tx.currency}\nIf you believe this is a mistake, contact support.`
+    );
+  } catch {}
+
+  return res.json({ ok: true, message: 'Declined', transaction_id: tx.id });
 });
 
