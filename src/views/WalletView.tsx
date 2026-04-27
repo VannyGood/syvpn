@@ -25,8 +25,8 @@ function formatDate(iso: string) {
 }
 
 const depositAddresses: Record<PaymentMethod, { address: string; label: string }> = {
-  ton: { address: 'UQAY0pUwY8fkhDqyqM8Ac2MKg7go4QLiqo1OtP836vBjmLbi', label: 'TON Wallet' },
-  trc20: { address: 'TMVy2tQnWfJcatM1ttVrRypa1TuGu6VxQK', label: 'TRC20 (USDT)' },
+  ton: { address: 'UQAY0pUwY8fkhDqyqM8Ac2MKg7go4QLiqo1OtP836vBjmLbi', label: 'USDT on TON' },
+  trc20: { address: 'TMVy2tQnWfJcatM1ttVrRypa1TuGu6VxQK', label: 'USDT on TRC20' },
   whish: { address: '', label: 'Whish Money' },
 };
 
@@ -76,7 +76,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
 
     const amount = Number(amountInput);
     if (!Number.isFinite(amount) || amount <= 0) {
-      onShowToast('Enter a valid amount (e.g. 3).', 'error');
+      onShowToast('Enter a valid amount (e.g. 3 USDT).', 'error');
       return;
     }
 
@@ -140,10 +140,13 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
           <Plus className="w-4 h-4 text-neon-blue" />
           Add Funds
         </h3>
+        <p className="text-[11px] text-gray-500 mb-3">
+          Pay with <span className="text-gray-300 font-medium">USDT</span>. Choose the network you want to use.
+        </p>
         <div className="grid grid-cols-3 gap-2">
           {([
-            { id: 'ton' as PaymentMethod, label: 'TON', iconSrc: toncoinIcon, disabled: false },
-            { id: 'trc20' as PaymentMethod, label: 'TRC20', iconSrc: trc20Icon, disabled: false },
+            { id: 'ton' as PaymentMethod, label: 'TON', iconSrc: toncoinIcon, disabled: false, subtitle: 'USDT' },
+            { id: 'trc20' as PaymentMethod, label: 'TRC20', iconSrc: trc20Icon, disabled: false, subtitle: 'USDT' },
             { id: 'whish' as PaymentMethod, label: 'Whish', iconSrc: whishIcon, disabled: true },
           ]).map((method) => (
             <GlassCard
@@ -173,6 +176,9 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                 loading="lazy"
               />
               <p className="text-xs font-semibold text-white">{method.label}</p>
+              {!method.disabled && method.subtitle && (
+                <p className="text-[10px] text-gray-500 mt-0.5">{method.subtitle}</p>
+              )}
               {method.disabled && (
                 <p className="text-[10px] text-gray-500 mt-0.5">Coming soon</p>
               )}
@@ -193,7 +199,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
             <GlassCard glow>
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-400">Amount (USD)</label>
+                  <label className="text-xs font-medium text-gray-400">Amount (USDT)</label>
                   <input
                     inputMode="decimal"
                     value={amountInput}
@@ -212,11 +218,11 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                     onClick={() => {
                       const amount = Number(amountInput);
                       if (!Number.isFinite(amount) || amount <= 0) {
-                        onShowToast('Enter a valid amount (e.g. 3).', 'error');
+                        onShowToast('Enter a valid amount (e.g. 3 USDT).', 'error');
                         return;
                       }
                       setDepositAgreed(true);
-                      onShowToast('Now copy the wallet address and send the payment.', 'info');
+                      onShowToast('Copy the address and send your USDT payment on the selected network.', 'info');
                     }}
                   >
                     I agree
@@ -224,7 +230,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                 ) : (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-400">
-                      Send {depositAddresses[selectedMethod].label} to:
+                      Send <span className="text-gray-300 font-medium">USDT</span> to ({depositAddresses[selectedMethod].label}):
                     </p>
                     <div className="flex items-center gap-2 bg-dark-900/50 rounded-xl p-3">
                       <code className="text-xs text-neon-blue flex-1 break-all font-mono">
