@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import WebApp from '@twa-dev/sdk';
 import { BottomNav } from './components/BottomNav';
@@ -10,7 +10,14 @@ import { WalletView } from './views/WalletView';
 import { ConfigView } from './views/ConfigView';
 import { ProfileView } from './views/ProfileView';
 import './index.css';
-import { getConfig, getWallet, getWalletTransactions, subscribe, telegramAuth } from './api/client';
+import {
+  getConfig,
+  getToken,
+  getWallet,
+  getWalletTransactions,
+  subscribe,
+  telegramAuth,
+} from './api/client';
 
 const planPrices: Record<string, { price: number; days: number; name: string }> = {
   '1month': { price: 2.99, days: 30, name: '1 Month' },
@@ -112,7 +119,30 @@ function App() {
     }
   }, []);
 
-  // Authenticate + fetch active config (if any)
+  const showToast = useCallback((message: string, type: ToastType = 'info') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  }, []);
+
+  /** Syncs plan + days left with backend (which pulls expiry from Marzban). */
+  const refreshSubscription = useCallback(async () => {
+    if (!getToken()) return;
+    try {
+      const cfg = await getConfig();
+      setIsSubscribed(true);
+      setConfigUrl(cfg.config_url);
+      setDaysLeft(daysUntil(cfg.expires_at));
+      setPlanName(cfg.plan_type === 'yearly' ? '1 Year' : '1 Month');
+    } catch {
+      setIsSubscribed(false);
+      setConfigUrl(undefined);
+      setDaysLeft(0);
+      setPlanName('');
+    }
+  }, []);
+
+  // Authenticate + wallet + first subscription sync
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -142,27 +172,15 @@ function App() {
         // ok
       }
 
-      try {
-        const cfg = await getConfig();
-        if (cancelled) return;
-        setIsSubscribed(true);
-        setConfigUrl(cfg.config_url);
-        setDaysLeft(daysUntil(cfg.expires_at));
-        setPlanName(cfg.plan_type === 'yearly' ? '1 Year' : '1 Month');
-      } catch {
-        // ok: no active subscription
-      }
+      await refreshSubscription();
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshSubscription]);
 
-  const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    setToastMessage(message);
-    setToastType(type);
-    setToastVisible(true);
-  }, []);
+  /** Skip first run so we don’t double-fetch on mount (handled in auth effect). */
+  const skipTabSubscriptionRefresh = useRef(true);
 
   const handleBuyPlan = useCallback(async (planId: string) => {
     const plan = planPrices[planId];
@@ -221,6 +239,26 @@ function App() {
       cancelled = true;
     };
   }, [activeTab]);
+
+  // Refetch subscription when visiting Home / Profile / VPN — backend syncs Marzban expiry on GET /config.
+  useEffect(() => {
+    if (activeTab !== 'home' && activeTab !== 'profile' && activeTab !== 'config') return;
+    if (skipTabSubscriptionRefresh.current) {
+      skipTabSubscriptionRefresh.current = false;
+      return;
+    }
+    void refreshSubscription();
+  }, [activeTab, refreshSubscription]);
+
+  // When returning to the mini app (e.g. after editing Marzban), refresh days remaining.
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState !== 'visible') return;
+      void refreshSubscription();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [refreshSubscription]);
 
   const pageVariants = {
     initial: { opacity: 0, y: 8 },
