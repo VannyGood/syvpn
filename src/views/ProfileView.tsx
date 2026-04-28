@@ -39,7 +39,7 @@ export function ProfileView({ username, firstName, isSubscribed, daysLeft, planN
   ];
 
   const menuItems = [
-    { icon: MessageCircle, label: 'Contact Support', desc: 'Get help via Telegram', action: () => window.open('https://t.me/sy_vpn_support', '_blank') },
+    { icon: MessageCircle, label: 'Contact Support', desc: 'Get help via Telegram', action: () => window.open('https://t.me/BossKingz1', '_blank') },
     { icon: HelpCircle, label: 'FAQ', desc: 'Common questions', action: () => setFaqOpen((v) => !v) },
   ];
 
