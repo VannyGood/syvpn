@@ -95,6 +95,25 @@ function detectCountryFromName(name: string): string | null {
   return null;
 }
 
+function iso2ToFlagEmoji(iso2: string): string | null {
+  const s = iso2.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(s)) return null;
+  const A = 0x1f1e6;
+  const first = A + (s.charCodeAt(0) - 65);
+  const second = A + (s.charCodeAt(1) - 65);
+  try {
+    return String.fromCodePoint(first, second);
+  } catch {
+    return null;
+  }
+}
+
+function nameHasLeadingFlagEmoji(name: string) {
+  // Matches any regional-indicator flag at the start of the string.
+  // eslint-disable-next-line no-control-regex
+  return /^[\u{1F1E6}-\u{1F1FF}]{2}\s*/u.test(name);
+}
+
 function parseHash(hashRaw: string): { name: string; params: Record<string, string> } {
   const raw = hashRaw.startsWith('#') ? hashRaw.slice(1) : hashRaw;
   if (!raw) return { name: '', params: {} };
@@ -151,13 +170,29 @@ function flagifyNodeLink(line: string): string {
   // Skip vmess:// because it carries base64 JSON, not URL params.
   if (u.protocol === 'vmess:') return line;
 
-  const { name, params } = parseHash(u.hash);
+  const parsed = parseHash(u.hash);
+  let name = parsed.name;
+  const params = parsed.params;
   const iso2 = detectCountryFromName(name);
   if (!iso2) return line;
 
   const flagUrl = `https://flagcdn.com/${iso2}.svg`;
-  // Put the flag in the fragment params so clients like Happ can read it.
+  // Different clients read hints from different places; set both query and fragment hints.
+  // - Some clients may look for a country code (e.g. NL) and render their own icon.
+  // - Some may accept a direct icon URL (flag).
+  u.searchParams.set('country', iso2);
+  u.searchParams.set('flag', flagUrl);
+  params.country = iso2;
   params.flag = flagUrl;
+
+  // Happ often displays the first emoji in the name as the icon.
+  // If the name begins with a non-flag emoji (e.g. 💊), Happ won't show the country flag.
+  // Prepend the detected flag emoji to the name to make it consistently visible.
+  const flagEmoji = iso2ToFlagEmoji(iso2);
+  if (flagEmoji && !nameHasLeadingFlagEmoji(name)) {
+    name = `${flagEmoji} ${name}`.trim();
+  }
+
   u.hash = buildHash({ name, params });
   return u.toString();
 }
