@@ -69,8 +69,9 @@ export const subscribe = asyncHandler(async (req, res) => {
     data: {
       userId: user.id,
       amount: plan.priceUsd,
-      currency: 'USD',
-      kind: 'purchase',
+      // Prisma client types may lag behind schema in some deployments; keep runtime correct.
+      currency: 'USD' as any,
+      kind: 'purchase' as any,
       status: 'paid',
       approvalToken: crypto.randomUUID(), // unique token
     },

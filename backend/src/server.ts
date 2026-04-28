@@ -13,6 +13,7 @@ import { planRoutes } from './routes/planRoutes.js';
 import { subscriptionRoutes } from './routes/subscriptionRoutes.js';
 import { walletRoutes } from './routes/walletRoutes.js';
 import { paymentRoutes } from './routes/paymentRoutes.js';
+import { toolsRoutes } from './routes/toolsRoutes.js';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use(planRoutes);
 app.use(subscriptionRoutes);
 app.use(walletRoutes);
 app.use(paymentRoutes);
+app.use('/tools', toolsRoutes);
 
 app.use(errorHandler);
 

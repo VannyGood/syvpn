@@ -72,10 +72,10 @@ export const approveTransaction = asyncHandler(async (req, res) => {
   });
   if (!tx) throw new HttpError(404, 'Transaction not found');
 
-  if (tx.status === 'paid') {
+  if ((tx as any).status === 'paid') {
     return res.json({ ok: true, message: 'Already approved', transaction_id: tx.id });
   }
-  if (tx.status === 'declined') {
+  if ((tx as any).status === 'declined') {
     return res.json({ ok: true, message: 'Already declined', transaction_id: tx.id });
   }
 
@@ -102,16 +102,16 @@ export const declineTransaction = asyncHandler(async (req, res) => {
   });
   if (!tx) throw new HttpError(404, 'Transaction not found');
 
-  if (tx.status === 'declined') {
+  if ((tx as any).status === 'declined') {
     return res.json({ ok: true, message: 'Already declined', transaction_id: tx.id });
   }
-  if (tx.status === 'paid') {
+  if ((tx as any).status === 'paid') {
     return res.json({ ok: true, message: 'Already approved (cannot decline)', transaction_id: tx.id });
   }
 
   await prisma.transaction.update({
     where: { id: tx.id },
-    data: { status: 'declined' },
+    data: { status: 'declined' as any },
   });
 
   // Notify user that their deposit was declined.

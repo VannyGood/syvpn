@@ -39,7 +39,7 @@ export const listTransactions = asyncHandler(async (req, res) => {
   res.json({
     transactions: txs.map((t) => ({
       id: t.id,
-      kind: t.kind,
+      kind: (t as any).kind,
       status: t.status,
       amount: String(t.amount),
       currency: t.currency,
