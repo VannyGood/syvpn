@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, Plus, ArrowUpRight, ArrowDownLeft, Copy } from 'lucide-react';
 import { GlassCard } from '../components/GlassCard';
@@ -31,25 +31,114 @@ const depositAddresses: Record<PaymentMethod, { address: string; label: string }
 };
 
 export function WalletView({ balance, onShowToast }: WalletViewProps) {
+  const PENDING_DEPOSIT_LS_KEY = 'syvpn_pending_deposit_tx_id';
+
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [paidActionVisible, setPaidActionVisible] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [processingSecondsLeft, setProcessingSecondsLeft] = useState(0);
+  const [awaitingAdmin, setAwaitingAdmin] = useState(false);
+  const [pendingTxId, setPendingTxId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(PENDING_DEPOSIT_LS_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const [pendingStartedAtMs, setPendingStartedAtMs] = useState<number>(() => Date.now());
+  const [pendingElapsedSec, setPendingElapsedSec] = useState(0);
   const [amountInput, setAmountInput] = useState('3');
   const [depositAgreed, setDepositAgreed] = useState(false);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+
+  const pendingTx = useMemo(() => {
+    if (!pendingTxId) return null;
+    return transactions.find((t) => t.id === pendingTxId) ?? null;
+  }, [pendingTxId, transactions]);
 
   useEffect(() => {
     let cancelled = false;
     void getWalletTransactions()
       .then((r) => {
-        if (!cancelled) setTransactions(r.transactions);
+        if (cancelled) return;
+        setTransactions(r.transactions);
+
+        // If we have a pending tx id saved, resume "waiting for admin" mode.
+        if (pendingTxId) {
+          const tx = r.transactions.find((t) => t.id === pendingTxId);
+          if (tx?.kind === 'deposit' && tx.status === 'pending') {
+            setAwaitingAdmin(true);
+            setPaidActionVisible(true);
+            setDepositAgreed(true);
+          } else if (tx && (tx.status === 'paid' || tx.status === 'declined')) {
+            // Already resolved (user reopened later) — clear local pending.
+            try {
+              localStorage.removeItem(PENDING_DEPOSIT_LS_KEY);
+            } catch {}
+            setPendingTxId(null);
+            setAwaitingAdmin(false);
+          }
+        }
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [pendingTxId]);
+
+  // While awaiting admin decision, poll transactions until this tx becomes paid/declined.
+  useEffect(() => {
+    if (!awaitingAdmin || !pendingTxId) return;
+
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const r = await getWalletTransactions();
+        if (cancelled) return;
+        setTransactions(r.transactions);
+
+        const tx = r.transactions.find((t) => t.id === pendingTxId);
+        if (!tx) return;
+
+        if (tx.status === 'paid') {
+          onShowToast('✅ Payment approved. Balance updated.', 'success');
+          setAwaitingAdmin(false);
+          setPaidActionVisible(false);
+          try {
+            localStorage.removeItem(PENDING_DEPOSIT_LS_KEY);
+          } catch {}
+          setPendingTxId(null);
+        } else if (tx.status === 'declined') {
+          onShowToast('❌ Payment declined. If this is a mistake, contact support.', 'error');
+          setAwaitingAdmin(false);
+          setPaidActionVisible(false);
+          try {
+            localStorage.removeItem(PENDING_DEPOSIT_LS_KEY);
+          } catch {}
+          setPendingTxId(null);
+        }
+      } catch {
+        // ignore; we'll try again
+      }
+    };
+
+    // Run immediately, then poll.
+    void tick();
+    const id = window.setInterval(() => void tick(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [awaitingAdmin, pendingTxId, onShowToast, pendingTxId]);
+
+  // Simple elapsed timer for the "processing" message.
+  useEffect(() => {
+    if (!awaitingAdmin) return;
+    setPendingElapsedSec(Math.max(0, Math.floor((Date.now() - pendingStartedAtMs) / 1000)));
+    const id = window.setInterval(() => {
+      setPendingElapsedSec(Math.max(0, Math.floor((Date.now() - pendingStartedAtMs) / 1000)));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [awaitingAdmin, pendingStartedAtMs]);
 
   const handleCopy = async (method: PaymentMethod, text: string) => {
     try {
@@ -66,6 +155,11 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
   const startPaymentProcessing = () => {
     if (paymentProcessing) {
       onShowToast('Already submitting your payment…', 'info');
+      return;
+    }
+
+    if (awaitingAdmin) {
+      onShowToast('Payment is already submitted. Waiting for admin approval…', 'info');
       return;
     }
 
@@ -92,12 +186,20 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
     const methodToUse: PaymentMethod = selectedMethod ?? 'ton';
 
     setPaymentProcessing(true);
-    setProcessingSecondsLeft(0);
-    onShowToast('Sent to admin for review. You’ll be approved shortly.', 'info');
+    onShowToast('Sent to admin for review. Waiting for confirmation…', 'info');
 
     void iPaid({ amount, currency: currencyMap[methodToUse] })
-      .then(() => {
+      .then((resp) => {
         setPaidActionVisible(false);
+        setAwaitingAdmin(true);
+        setPendingStartedAtMs(Date.now());
+        const txId = resp?.transaction?.id;
+        if (txId) {
+          setPendingTxId(txId);
+          try {
+            localStorage.setItem(PENDING_DEPOSIT_LS_KEY, txId);
+          } catch {}
+        }
         onShowToast('Payment submitted. Waiting for admin approval.', 'success');
         return getWalletTransactions();
       })
@@ -106,6 +208,11 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
       })
       .catch((e) => {
         onShowToast((e as Error).message || 'Failed to submit payment', 'error');
+        setAwaitingAdmin(false);
+        try {
+          localStorage.removeItem(PENDING_DEPOSIT_LS_KEY);
+        } catch {}
+        setPendingTxId(null);
       })
       .finally(() => {
         setPaymentProcessing(false);
@@ -252,12 +359,12 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                         onClick={startPaymentProcessing}
                         onPointerDown={startPaymentProcessing}
                         onTouchStart={startPaymentProcessing}
-                        disabled={paymentProcessing}
+                        disabled={paymentProcessing || awaitingAdmin}
                       >
-                        {paymentProcessing ? (
+                        {paymentProcessing || awaitingAdmin ? (
                           <>
                             <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                            Processing…
+                            {awaitingAdmin ? 'Waiting for confirmation…' : 'Submitting…'}
                           </>
                         ) : (
                           'I have paid'
@@ -278,10 +385,16 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                       Change amount
                     </GlowButton>
 
-                    {paymentProcessing && paidActionVisible && (
+                    {awaitingAdmin && (
                       <p className="text-[11px] text-gray-500 text-center">
-                        Checking payment… {Math.floor(processingSecondsLeft / 60)}:
-                        {String(processingSecondsLeft % 60).padStart(2, '0')}
+                        Payment is processing. This usually takes a few minutes.
+                        {pendingTx?.status === 'pending' ? (
+                          <>
+                            {' '}
+                            Elapsed {Math.floor(pendingElapsedSec / 60)}:
+                            {String(pendingElapsedSec % 60).padStart(2, '0')}.
+                          </>
+                        ) : null}
                       </p>
                     )}
                   </div>
