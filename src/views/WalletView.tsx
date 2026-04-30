@@ -61,10 +61,25 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
     return 0;
   }, [selectedMethod]);
 
-  const recommendedToSend = useMemo(() => {
+  // In this UX, the user enters "amount to send" (fee-inclusive),
+  // and we credit "amount - fee" to keep deposits consistent.
+  const willBeCredited = useMemo(() => {
     if (!Number.isFinite(amountValue) || amountValue <= 0) return NaN;
-    return Math.max(0, amountValue + networkFee);
+    return Math.max(0, amountValue - networkFee);
   }, [amountValue, networkFee]);
+
+  // Set a professional default "amount to send" per network.
+  useEffect(() => {
+    if (!selectedMethod || selectedMethod === 'whish') return;
+    const defaultSend = selectedMethod === 'ton' ? 3.7 : 4.2;
+    setAmountInput((prev) => {
+      const n = Number(prev);
+      // Only auto-fill when empty/invalid or still the old placeholder "3".
+      if (!prev.trim() || !Number.isFinite(n) || prev.trim() === '3') return defaultSend.toFixed(2);
+      return prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMethod]);
 
   const pendingTx = useMemo(() => {
     if (!pendingTxId) return null;
@@ -184,11 +199,17 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
       return;
     }
 
-    const amount = amountValue;
-    if (!Number.isFinite(amount) || amount <= 0) {
-      onShowToast('Enter a valid amount (e.g. 3 USDT).', 'error');
+    const sendAmount = amountValue;
+    if (!Number.isFinite(sendAmount) || sendAmount <= 0) {
+      onShowToast('Enter a valid amount to send (e.g. 4.20 USDT).', 'error');
       return;
     }
+    if (sendAmount <= networkFee) {
+      onShowToast(`Amount must be greater than the network fee (${networkFee.toFixed(2)} USDT).`, 'error');
+      return;
+    }
+
+    const creditAmount = Math.max(0, sendAmount - networkFee);
 
     // Immediate feedback so we can confirm the tap handler fires in mobile WebViews.
     onShowToast('Submitting payment…', 'info');
@@ -204,7 +225,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
     setPaymentProcessing(true);
     onShowToast('Sent to admin for review. Waiting for confirmation…', 'info');
 
-    void iPaid({ amount, currency: currencyMap[methodToUse] })
+    void iPaid({ amount: creditAmount, currency: currencyMap[methodToUse] })
       .then((resp) => {
         setPaidActionVisible(false);
         setAwaitingAdmin(true);
@@ -322,7 +343,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
             <GlassCard glow>
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-400">Amount (USDT)</label>
+                  <label className="text-xs font-medium text-gray-400">Amount to send (USDT)</label>
                   <input
                     inputMode="decimal"
                     value={amountInput}
@@ -339,13 +360,13 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                       <p className="text-[11px] text-gray-300 font-medium">+{networkFee.toFixed(2)} USDT</p>
                     </div>
                     <div className="flex items-center justify-between mt-1">
-                      <p className="text-xs text-gray-300 font-medium">Recommended to send</p>
+                      <p className="text-xs text-gray-300 font-medium">Will be credited</p>
                       <p className="text-xs text-white font-semibold">
-                        {Number.isFinite(recommendedToSend) ? `${recommendedToSend.toFixed(2)} USDT` : '—'}
+                        {Number.isFinite(willBeCredited) ? `${willBeCredited.toFixed(2)} USDT` : '—'}
                       </p>
                     </div>
                     <p className="text-[10px] text-gray-500 mt-1">
-                      This helps cover network costs so your wallet credits correctly.
+                      Enter the amount you will send. Your wallet is credited after subtracting the network fee.
                     </p>
                   </div>
                 )}
@@ -357,17 +378,17 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                     size="lg"
                     variant="secondary"
                     onClick={() => {
-                      const amount = amountValue;
-                      if (!Number.isFinite(amount) || amount <= 0) {
-                        onShowToast('Enter a valid amount (e.g. 3 USDT).', 'error');
+                      const sendAmount = amountValue;
+                      if (!Number.isFinite(sendAmount) || sendAmount <= 0) {
+                        onShowToast('Enter a valid amount to send (e.g. 4.20 USDT).', 'error');
+                        return;
+                      }
+                      if (sendAmount <= networkFee) {
+                        onShowToast(`Amount must be greater than the network fee (${networkFee.toFixed(2)} USDT).`, 'error');
                         return;
                       }
                       setDepositAgreed(true);
-                      if (Number.isFinite(recommendedToSend)) {
-                        onShowToast(`Send ${recommendedToSend.toFixed(2)} USDT on the selected network.`, 'info');
-                      } else {
-                        onShowToast('Copy the address and send your USDT payment on the selected network.', 'info');
-                      }
+                      onShowToast(`Send ${sendAmount.toFixed(2)} USDT on the selected network.`, 'info');
                     }}
                   >
                     I agree
@@ -377,7 +398,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                     <p className="text-xs font-medium text-gray-400">
                       Send{' '}
                       <span className="text-gray-300 font-medium">
-                        {Number.isFinite(recommendedToSend) ? `${recommendedToSend.toFixed(2)} USDT` : 'USDT'}
+                        {Number.isFinite(amountValue) ? `${amountValue.toFixed(2)} USDT` : 'USDT'}
                       </span>{' '}
                       to ({depositAddresses[selectedMethod].label}):
                     </p>
