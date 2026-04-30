@@ -4,6 +4,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
 import { requirePlan } from '../services/planService.js';
 import { marzban } from '../services/marzbanService.js';
+import { ensurePublicSubToken, publicSubscriptionUrl } from '../services/subProxyService.js';
 
 function addDays(date: Date, days: number) {
   const d = new Date(date);
@@ -64,6 +65,8 @@ export const subscribe = asyncHandler(async (req, res) => {
     },
   });
 
+  const pubToken = await ensurePublicSubToken(updated.id);
+
   // Deduct wallet with a paid purchase transaction
   await prisma.transaction.create({
     data: {
@@ -84,7 +87,7 @@ export const subscribe = asyncHandler(async (req, res) => {
       status: updated.status,
       expires_at: updated.expiresAt,
       marzban_user_id: updated.marzbanUserId,
-      config_url: updated.configUrl,
+      config_url: publicSubscriptionUrl(pubToken),
     },
   });
 });
@@ -129,10 +132,26 @@ export const getConfig = asyncHandler(async (req, res) => {
 
   if (expiresAt <= new Date()) throw new HttpError(404, 'No active subscription/config');
 
+  const pubToken = await ensurePublicSubToken(sub.id);
+
   res.json({
-    config_url: configUrl,
+    config_url: publicSubscriptionUrl(pubToken),
+    max_devices: 2,
     expires_at: expiresAt,
     plan_type: sub.planType,
   });
+});
+
+export const resetSubDevices = asyncHandler(async (req, res) => {
+  if (!req.user) throw new HttpError(401, 'Unauthorized');
+
+  const sub = await prisma.subscription.findFirst({
+    where: { userId: req.user.sub, status: 'active' },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!sub) throw new HttpError(404, 'No active subscription');
+
+  await prisma.subDeviceFingerprint.deleteMany({ where: { subscriptionId: sub.id } });
+  res.json({ ok: true });
 });
 

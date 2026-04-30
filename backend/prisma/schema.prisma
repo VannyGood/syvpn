@@ -54,14 +54,31 @@ model Subscription {
   status        SubscriptionStatus @default(inactive)
   expiresAt     DateTime           @map("expires_at")
   marzbanUserId String?            @map("marzban_user_id")
-  configUrl     String?            @map("config_url")
+  /// Marzban subscription URL (upstream). Not shown to users — use publicSubToken + /sub/:token proxy.
+  configUrl       String?            @map("config_url")
+  publicSubToken  String?            @unique @map("public_sub_token")
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subDevices SubDeviceFingerprint[]
 
   @@index([userId])
   @@map("subscriptions")
+}
+
+/// Fingerprints (IP + User-Agent) allowed to fetch the single public /sub/:token link (max 2 per subscription).
+model SubDeviceFingerprint {
+  id             String   @id @default(uuid())
+  subscriptionId String   @map("subscription_id")
+  fpHash         String   @map("fp_hash")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, fpHash])
+  @@index([subscriptionId])
+  @@map("sub_device_fingerprints")
 }
 
 model Transaction {

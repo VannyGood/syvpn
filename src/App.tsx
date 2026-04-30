@@ -307,6 +307,7 @@ function App() {
                 configUrl={configUrl}
                 onBuyPlan={handleBuyPlan}
                 onShowToast={showToast}
+                onSubscriptionRefreshed={refreshSubscription}
               />
             )}
             {activeTab === 'profile' && (

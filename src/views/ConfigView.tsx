@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Copy, Check, Download, Smartphone, Globe, ChevronRight, Sparkles } from 'lucide-react';
+import { Shield, Copy, Check, Download, Smartphone, Globe, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import { GlassCard } from '../components/GlassCard';
 import { GlowButton } from '../components/GlowButton';
 import { copyText } from '../utils/copyText';
+import { resetSubDevices } from '../api/client';
 
 interface ConfigViewProps {
   isSubscribed: boolean;
   configUrl?: string;
   onBuyPlan: (plan: string) => void;
   onShowToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  onSubscriptionRefreshed?: () => Promise<void>;
 }
 
 const plans = [
@@ -25,9 +27,10 @@ const steps = [
   { n: 5, title: 'Connect & Enjoy', desc: 'Browse securely!', icon: Shield },
 ];
 
-export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast }: ConfigViewProps) {
+export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast, onSubscriptionRefreshed }: ConfigViewProps) {
   const [copied, setCopied] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('1month');
+  const [resetting, setResetting] = useState(false);
 
   const displayConfigUrl = (() => {
     return configUrl;
@@ -44,6 +47,19 @@ export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast }: 
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleResetDevices = async () => {
+    setResetting(true);
+    try {
+      await resetSubDevices();
+      onShowToast('Device list cleared. You can import again on a new phone or Wi‑Fi.', 'success');
+      await onSubscriptionRefreshed?.();
+    } catch (e) {
+      onShowToast((e as Error).message || 'Could not reset devices', 'error');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   if (isSubscribed) {
     return (
       <div className="space-y-5">
@@ -52,15 +68,18 @@ export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast }: 
             <Shield className="w-7 h-7 text-neon-green" />
           </div>
           <h2 className="text-xl font-bold text-white">Your VPN Config</h2>
-          <p className="text-sm text-gray-400 mt-1">Copy and import into Happ VPN</p>
+          <p className="text-sm text-gray-400 mt-1">One subscription link — up to 2 devices</p>
         </div>
 
         <GlassCard glow>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-400">VLESS Configuration</span>
+              <span className="text-xs font-medium text-gray-400">Subscription link</span>
               <span className="status-active px-2 py-0.5 rounded-md text-[10px] font-semibold">ACTIVE</span>
             </div>
+            <p className="text-[11px] text-gray-500">
+              Use this single link on two phones or tablets. A third device will be blocked until you reset devices below (e.g. new phone or network).
+            </p>
             <div className="bg-dark-900/60 rounded-xl p-3">
               <code className="text-xs text-neon-blue/80 font-mono break-all leading-relaxed block max-h-24 overflow-y-auto">
                 {displayConfigUrl ?? 'No config found yet.'}
@@ -68,6 +87,17 @@ export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast }: 
             </div>
             <GlowButton id="copy-config-btn" onClick={handleCopy} fullWidth size="lg">
               {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Config URL</>}
+            </GlowButton>
+            <GlowButton
+              id="reset-sub-devices-btn"
+              variant="ghost"
+              fullWidth
+              size="sm"
+              disabled={resetting}
+              onClick={() => void handleResetDevices()}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
+              {resetting ? 'Resetting…' : 'Reset allowed devices'}
             </GlowButton>
           </div>
         </GlassCard>

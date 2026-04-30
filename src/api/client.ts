@@ -72,9 +72,14 @@ export async function subscribe(planType: 'monthly' | 'yearly') {
 export async function getConfig() {
   return request<{
     config_url: string;
+    max_devices?: number;
     expires_at: string;
     plan_type: 'monthly' | 'yearly';
   }>('GET', '/config');
+}
+
+export async function resetSubDevices() {
+  return request<{ ok: boolean }>('POST', '/config/sub-devices/reset', {});
 }
 
 export async function getWallet() {
