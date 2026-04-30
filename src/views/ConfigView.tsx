@@ -29,12 +29,19 @@ export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast }: 
   const [copied, setCopied] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('1month');
 
+  const displayConfigUrl = (() => {
+    if (!configUrl) return undefined;
+    // Happ uses the URL fragment as the subscription name (e.g. "#SYVPN").
+    // Ensure we always provide a friendly name instead of the default "Subscription".
+    return configUrl.includes('#') ? configUrl : `${configUrl}#SYVPN`;
+  })();
+
   const handleCopy = () => {
-    if (!configUrl) {
+    if (!displayConfigUrl) {
       onShowToast('No config found yet. Please subscribe first.', 'error');
       return;
     }
-    void copyText(configUrl);
+    void copyText(displayConfigUrl);
     setCopied(true);
     onShowToast('Config URL copied!', 'success');
     setTimeout(() => setCopied(false), 2000);
@@ -59,7 +66,7 @@ export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast }: 
             </div>
             <div className="bg-dark-900/60 rounded-xl p-3">
               <code className="text-xs text-neon-blue/80 font-mono break-all leading-relaxed block max-h-24 overflow-y-auto">
-                {configUrl ?? 'No config found yet.'}
+                {displayConfigUrl ?? 'No config found yet.'}
               </code>
             </div>
             <GlowButton id="copy-config-btn" onClick={handleCopy} fullWidth size="lg">
