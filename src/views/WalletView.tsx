@@ -50,6 +50,22 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
   const [depositAgreed, setDepositAgreed] = useState(false);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
 
+  const amountValue = useMemo(() => {
+    const n = Number(amountInput);
+    return Number.isFinite(n) ? n : NaN;
+  }, [amountInput]);
+
+  const networkFee = useMemo(() => {
+    if (selectedMethod === 'ton') return 0.7;
+    if (selectedMethod === 'trc20') return 1.2;
+    return 0;
+  }, [selectedMethod]);
+
+  const recommendedToSend = useMemo(() => {
+    if (!Number.isFinite(amountValue) || amountValue <= 0) return NaN;
+    return Math.max(0, amountValue + networkFee);
+  }, [amountValue, networkFee]);
+
   const pendingTx = useMemo(() => {
     if (!pendingTxId) return null;
     return transactions.find((t) => t.id === pendingTxId) ?? null;
@@ -168,7 +184,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
       return;
     }
 
-    const amount = Number(amountInput);
+    const amount = amountValue;
     if (!Number.isFinite(amount) || amount <= 0) {
       onShowToast('Enter a valid amount (e.g. 3 USDT).', 'error');
       return;
@@ -316,6 +332,24 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                   />
                 </div>
 
+                {selectedMethod && selectedMethod !== 'whish' && (
+                  <div className="bg-dark-900/35 rounded-xl p-3 border border-white/10">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] text-gray-500">Network fee</p>
+                      <p className="text-[11px] text-gray-300 font-medium">+{networkFee.toFixed(2)} USDT</p>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-gray-300 font-medium">Recommended to send</p>
+                      <p className="text-xs text-white font-semibold">
+                        {Number.isFinite(recommendedToSend) ? `${recommendedToSend.toFixed(2)} USDT` : '—'}
+                      </p>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      This helps cover network costs so your wallet credits correctly.
+                    </p>
+                  </div>
+                )}
+
                 {!depositAgreed ? (
                   <GlowButton
                     id="deposit-agree-btn"
@@ -323,13 +357,17 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                     size="lg"
                     variant="secondary"
                     onClick={() => {
-                      const amount = Number(amountInput);
+                      const amount = amountValue;
                       if (!Number.isFinite(amount) || amount <= 0) {
                         onShowToast('Enter a valid amount (e.g. 3 USDT).', 'error');
                         return;
                       }
                       setDepositAgreed(true);
-                      onShowToast('Copy the address and send your USDT payment on the selected network.', 'info');
+                      if (Number.isFinite(recommendedToSend)) {
+                        onShowToast(`Send ${recommendedToSend.toFixed(2)} USDT on the selected network.`, 'info');
+                      } else {
+                        onShowToast('Copy the address and send your USDT payment on the selected network.', 'info');
+                      }
                     }}
                   >
                     I agree
@@ -337,7 +375,11 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                 ) : (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-400">
-                      Send <span className="text-gray-300 font-medium">USDT</span> to ({depositAddresses[selectedMethod].label}):
+                      Send{' '}
+                      <span className="text-gray-300 font-medium">
+                        {Number.isFinite(recommendedToSend) ? `${recommendedToSend.toFixed(2)} USDT` : 'USDT'}
+                      </span>{' '}
+                      to ({depositAddresses[selectedMethod].label}):
                     </p>
                     <div className="flex items-center gap-2 bg-dark-900/50 rounded-xl p-3">
                       <code className="text-xs text-neon-blue flex-1 break-all font-mono">
