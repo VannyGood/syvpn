@@ -47,6 +47,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
   const [pendingStartedAtMs, setPendingStartedAtMs] = useState<number>(() => Date.now());
   const [pendingElapsedSec, setPendingElapsedSec] = useState(0);
   const [amountInput, setAmountInput] = useState('3');
+  const [amountTouched, setAmountTouched] = useState(false);
   const [depositAgreed, setDepositAgreed] = useState(false);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
 
@@ -72,14 +73,10 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
   useEffect(() => {
     if (!selectedMethod || selectedMethod === 'whish') return;
     const defaultSend = selectedMethod === 'ton' ? 3.7 : 4.2;
-    setAmountInput((prev) => {
-      const n = Number(prev);
-      // Only auto-fill when empty/invalid or still the old placeholder "3".
-      if (!prev.trim() || !Number.isFinite(n) || prev.trim() === '3') return defaultSend.toFixed(2);
-      return prev;
-    });
+    // If user hasn't typed a custom value, always update when switching networks.
+    if (!amountTouched) setAmountInput(defaultSend.toFixed(2));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMethod]);
+  }, [selectedMethod, amountTouched]);
 
   const pendingTx = useMemo(() => {
     if (!pendingTxId) return null;
@@ -301,6 +298,7 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                   : () => {
                     const next = selectedMethod === method.id ? null : method.id;
                     setSelectedMethod(next);
+                    setAmountTouched(false);
                     setDepositAgreed(false);
                     setPaidActionVisible(false);
                   }
@@ -347,7 +345,10 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                   <input
                     inputMode="decimal"
                     value={amountInput}
-                    onChange={(e) => setAmountInput(e.target.value)}
+                    onChange={(e) => {
+                      setAmountTouched(true);
+                      setAmountInput(e.target.value);
+                    }}
                     placeholder="e.g. 3"
                     className="w-full bg-dark-900/50 rounded-xl px-3 py-2 text-sm text-white border border-white/10 focus:outline-none focus:border-neon-blue/40"
                   />
