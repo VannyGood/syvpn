@@ -31,9 +31,10 @@ export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast }: 
 
   const displayConfigUrl = (() => {
     if (!configUrl) return undefined;
-    // Happ uses the URL fragment as the subscription name (e.g. "#SYVPN").
-    // Ensure we always provide a friendly name instead of the default "Subscription".
-    return configUrl.includes('#') ? configUrl : `${configUrl}#SYVPN`;
+    // Happ supports profile naming via HTTP header `profile-title` or subscription body `#profile-title:`.
+    // We proxy the Marzban subscription through our backend so Happ displays "SYVPN" consistently.
+    const enc = encodeURIComponent(configUrl);
+    return `/backend/tools/happ-sub?title=SYVPN&url=${enc}`;
   })();
 
   const handleCopy = () => {

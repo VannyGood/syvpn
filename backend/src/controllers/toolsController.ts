@@ -234,3 +234,45 @@ export const flagify = asyncHandler(async (req, res) => {
   res.send(out);
 });
 
+function ensureProfileTitle(text: string, title: string) {
+  const normalized = text.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+  const hasTitle = lines.some((l) => l.trim().toLowerCase().startsWith('#profile-title:'));
+  if (hasTitle) return normalized;
+  return `#profile-title: ${title}\n${normalized}`;
+}
+
+export const happSub = asyncHandler(async (req, res) => {
+  const urlRaw = typeof req.query.url === 'string' ? req.query.url : '';
+  const titleRaw = typeof req.query.title === 'string' ? req.query.title : 'SYVPN';
+  const title = (titleRaw || 'SYVPN').slice(0, 25);
+
+  if (!urlRaw) throw new HttpError(400, 'Missing url');
+  if (urlRaw.length > 4000) throw new HttpError(400, 'URL too long');
+
+  let url: URL;
+  try {
+    url = new URL(urlRaw);
+  } catch {
+    throw new HttpError(400, 'Invalid url');
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new HttpError(400, 'Only http/https urls are allowed');
+  if (isPrivateHostname(url.hostname)) throw new HttpError(400, 'Private/localhost urls are not allowed');
+
+  const { data } = await axios.get<string>(url.toString(), {
+    responseType: 'text' as any,
+    timeout: 15_000,
+    headers: { 'accept-encoding': 'identity' },
+    validateStatus: (s) => s >= 200 && s < 300,
+  });
+
+  const { decoded, wasBase64 } = decodeMaybeBase64(String(data ?? ''));
+  const updated = ensureProfileTitle(decoded, title);
+  const out = wasBase64 ? Buffer.from(updated, 'utf8').toString('base64') : updated;
+
+  // Happ supports profile-title via HTTP headers.
+  res.setHeader('profile-title', title);
+  res.setHeader('content-type', 'text/plain; charset=utf-8');
+  res.send(out);
+});
+
