@@ -67,7 +67,7 @@ model Subscription {
   @@map("subscriptions")
 }
 
-/// Fingerprints (IP + User-Agent) allowed to fetch the single public /sub/:token link (max 2 per subscription).
+/// v2: fingerprints = one slot per client IP (max 2 distinct IPs per subscription).
 model SubDeviceFingerprint {
   id             String   @id @default(uuid())
   subscriptionId String   @map("subscription_id")

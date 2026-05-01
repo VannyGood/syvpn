@@ -68,7 +68,7 @@ export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast, on
             <Shield className="w-7 h-7 text-neon-green" />
           </div>
           <h2 className="text-xl font-bold text-white">Your VPN Config</h2>
-          <p className="text-sm text-gray-400 mt-1">One subscription link — up to 2 devices</p>
+          <p className="text-sm text-gray-400 mt-1">One link — up to 2 networks (IPs)</p>
         </div>
 
         <GlassCard glow>
@@ -78,7 +78,7 @@ export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast, on
               <span className="status-active px-2 py-0.5 rounded-md text-[10px] font-semibold">ACTIVE</span>
             </div>
             <p className="text-[11px] text-gray-500">
-              Use this single link on two phones or tablets. A third device will be blocked until you reset devices below (e.g. new phone or network).
+              Same Wi‑Fi counts as one network (browser + Happ OK). A third different network is blocked until you reset below.
             </p>
             <div className="bg-dark-900/60 rounded-xl p-3">
               <code className="text-xs text-neon-blue/80 font-mono break-all leading-relaxed block max-h-24 overflow-y-auto">

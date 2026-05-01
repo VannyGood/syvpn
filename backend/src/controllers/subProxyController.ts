@@ -5,20 +5,91 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
 import { MAX_SUBSCRIPTION_DEVICES, resolveSubscriptionUpstreamUrl } from '../services/subProxyService.js';
 
+/** Only rows with this prefix count toward the limit (ignores legacy IP|UA hashes). */
+const FP_VERSION_PREFIX = 'v2:';
+
 function clientIp(req: { ip?: string; socket: { remoteAddress?: string } }) {
   const ip = req.ip || req.socket.remoteAddress || '';
   return ip.replace(/^::ffff:/, '');
 }
 
-function deviceFingerprint(req: { ip?: string; socket: { remoteAddress?: string }; headers: { [k: string]: unknown } }) {
-  const ip = clientIp(req);
-  const ua = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '';
-  return crypto.createHash('sha256').update(`${ip}|${ua}`).digest('hex');
+/** One slot per public IP (browser + Happ on same Wi‑Fi share one slot). */
+function deviceFingerprint(req: { ip?: string; socket: { remoteAddress?: string } }) {
+  const ip = clientIp(req) || '0.0.0.0';
+  const digest = crypto.createHash('sha256').update(ip, 'utf8').digest('hex');
+  return `${FP_VERSION_PREFIX}${digest}`;
+}
+
+function tryDecodeProfileBase64(oneLine: string): string | null {
+  const compact = oneLine.replace(/\s/g, '');
+  if (compact.length < 32) return null;
+  if (!/^[A-Za-z0-9+/=_-]+=*$/.test(compact)) return null;
+  const stdB64 = compact.replace(/-/g, '+').replace(/_/g, '/');
+  try {
+    const dec = Buffer.from(stdB64, 'base64').toString('utf8');
+    if (
+      dec.includes('vless:') ||
+      dec.includes('vmess:') ||
+      dec.includes('trojan:') ||
+      dec.includes('ss://')
+    ) {
+      return dec;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Happ and many clients expect newline-separated vless:// lines. Marzban often
+ * returns a single base64 line; decode when safe so parsers see real nodes.
+ */
+function normalizeSubscriptionPayload(raw: Buffer, upstreamContentType: string): { body: Buffer; contentType: string } {
+  let text: string;
+  try {
+    text = raw.toString('utf8');
+  } catch {
+    return { body: raw, contentType: upstreamContentType };
+  }
+  const trimmed = text.trim();
+  if (!trimmed) return { body: raw, contentType: upstreamContentType };
+
+  if (
+    trimmed.includes('vless://') ||
+    trimmed.includes('vmess://') ||
+    trimmed.includes('trojan://') ||
+    trimmed.includes('ss://')
+  ) {
+    return { body: Buffer.from(trimmed, 'utf8'), contentType: 'text/plain; charset=utf-8' };
+  }
+
+  if (trimmed.startsWith('{')) {
+    try {
+      const j = JSON.parse(trimmed) as Record<string, unknown>;
+      for (const k of ['subscription', 'data', 'content', 'base64']) {
+        const v = j[k];
+        if (typeof v === 'string') {
+          const inner = tryDecodeProfileBase64(v);
+          if (inner) return { body: Buffer.from(inner, 'utf8'), contentType: 'text/plain; charset=utf-8' };
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const decoded = tryDecodeProfileBase64(trimmed);
+  if (decoded) {
+    return { body: Buffer.from(decoded, 'utf8'), contentType: 'text/plain; charset=utf-8' };
+  }
+
+  return { body: raw, contentType: upstreamContentType };
 }
 
 /**
  * One clean URL per user: GET /sub/:token → Marzban subscription body.
- * Allows up to MAX_SUBSCRIPTION_DEVICES distinct (IP + User-Agent) fingerprints.
+ * Up to MAX_SUBSCRIPTION_DEVICES distinct public IPs (v2 fingerprints).
  */
 export const proxyPublicSubscription = asyncHandler(async (req, res) => {
   const token = typeof req.params?.token === 'string' ? req.params.token : '';
@@ -48,7 +119,9 @@ export const proxyPublicSubscription = asyncHandler(async (req, res) => {
   });
 
   if (!known) {
-    const count = await prisma.subDeviceFingerprint.count({ where: { subscriptionId: sub.id } });
+    const count = await prisma.subDeviceFingerprint.count({
+      where: { subscriptionId: sub.id, fpHash: { startsWith: FP_VERSION_PREFIX } },
+    });
     if (count >= MAX_SUBSCRIPTION_DEVICES) {
       res
         .status(403)
@@ -78,12 +151,15 @@ export const proxyPublicSubscription = asyncHandler(async (req, res) => {
   }
 
   const rawCt = upstream.headers['content-type'];
-  const ct =
+  const upstreamCt =
     typeof rawCt === 'string'
       ? rawCt
       : Array.isArray(rawCt) && typeof rawCt[0] === 'string'
         ? rawCt[0]
         : 'text/plain; charset=utf-8';
-  res.setHeader('content-type', ct);
-  res.status(200).send(Buffer.from(upstream.data));
+
+  const buf = Buffer.from(upstream.data);
+  const { body, contentType } = normalizeSubscriptionPayload(buf, upstreamCt);
+  res.setHeader('content-type', contentType);
+  res.status(200).send(body);
 });
