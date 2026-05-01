@@ -24,6 +24,7 @@ COPY package.json ./
 
 EXPOSE 8080
 
-# Ensure client exists, sync schema, then start server
-CMD ["sh", "-c", "npx prisma generate && npx prisma db push && node dist/server.js"]
+# Sync schema then start. --accept-data-loss: Prisma may require this when adding
+# constraints (e.g. unique on public_sub_token); it does not delete existing rows.
+CMD ["sh", "-c", "npx prisma generate && npx prisma db push --accept-data-loss && node dist/server.js"]
 

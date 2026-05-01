@@ -55,7 +55,7 @@ export const iPaid = asyncHandler(async (req, res) => {
     transaction: {
       id: tx.id,
       status: tx.status,
-      amount: tx.amount,
+      amount: String(tx.amount),
       currency: tx.currency,
       created_at: tx.createdAt,
     },

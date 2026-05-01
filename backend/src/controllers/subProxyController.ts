@@ -3,7 +3,7 @@ import axios from 'axios';
 import { prisma } from '../config/prisma.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
-import { MAX_SUBSCRIPTION_DEVICES } from '../services/subProxyService.js';
+import { MAX_SUBSCRIPTION_DEVICES, resolveSubscriptionUpstreamUrl } from '../services/subProxyService.js';
 
 function clientIp(req: { ip?: string; socket: { remoteAddress?: string } }) {
   const ip = req.ip || req.socket.remoteAddress || '';
@@ -63,9 +63,11 @@ export const proxyPublicSubscription = asyncHandler(async (req, res) => {
     });
   }
 
+  const fetchUrl = resolveSubscriptionUpstreamUrl(sub.configUrl);
+
   let upstream;
   try {
-    upstream = await axios.get<ArrayBuffer>(sub.configUrl, {
+    upstream = await axios.get<ArrayBuffer>(fetchUrl, {
       responseType: 'arraybuffer',
       timeout: 20_000,
       headers: { 'accept-encoding': 'identity' },

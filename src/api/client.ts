@@ -24,7 +24,17 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown): Pro
   });
 
   const text = await res.text();
-  const data = text ? (JSON.parse(text) as unknown) : null;
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text) as unknown;
+    } catch {
+      const snippet = text.trim().slice(0, 160).replace(/\s+/g, ' ');
+      throw new Error(
+        `Server sent a non-JSON reply (${res.status}). Usually nginx/proxy returned HTML (wrong URL or /backend not routed to the API). Start of body: ${snippet}${text.length > 160 ? '…' : ''}`
+      );
+    }
+  }
 
   if (!res.ok) {
     const msg =

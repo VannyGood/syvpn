@@ -16,6 +16,8 @@ const envSchema = z.object({
   PUBLIC_BASE_URL: z.string().url(),
 
   MARZBAN_URL: z.string().url(),
+  /** When configUrl is https://your-domain/sub/…, fetches must not loop through nginx → SYVPN; use this origin (e.g. http://127.0.0.1:8000). */
+  MARZBAN_INTERNAL_ORIGIN: z.string().url().optional(),
   MARZBAN_USERNAME: z.string().min(1),
   MARZBAN_PASSWORD: z.string().min(1),
   // Optional: restrict Marzban user creation to this inbound tag
