@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { User, Shield, HelpCircle, MessageCircle, ChevronDown } from 'lucide-react';
+import { User, Shield, HelpCircle, MessageCircle, ChevronDown, RefreshCw } from 'lucide-react';
 import { GlassCard } from '../components/GlassCard';
+import { GlowButton } from '../components/GlowButton';
+import { resetSubDevices } from '../api/client';
 
 interface ProfileViewProps {
   username: string;
@@ -9,11 +11,36 @@ interface ProfileViewProps {
   isSubscribed: boolean;
   daysLeft: number;
   planName: string;
+  onShowToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+  onSubscriptionRefreshed?: () => Promise<void>;
 }
 
-export function ProfileView({ username, firstName, isSubscribed, daysLeft, planName }: ProfileViewProps) {
+export function ProfileView({
+  username,
+  firstName,
+  isSubscribed,
+  daysLeft,
+  planName,
+  onShowToast,
+  onSubscriptionRefreshed,
+}: ProfileViewProps) {
   const [faqOpen, setFaqOpen] = useState(false);
   const [openFaqId, setOpenFaqId] = useState<string | null>('what-is-vpn');
+  const [resetting, setResetting] = useState(false);
+
+  const handleResetNetworks = async () => {
+    if (!onShowToast) return;
+    setResetting(true);
+    try {
+      await resetSubDevices();
+      onShowToast('Networks cleared. Import your link again in Happ.', 'success');
+      await onSubscriptionRefreshed?.();
+    } catch (e) {
+      onShowToast((e as Error).message || 'Could not reset', 'error');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   const faqItems = [
     {
@@ -71,16 +98,34 @@ export function ProfileView({ username, firstName, isSubscribed, daysLeft, planN
             </span>
           </div>
           {isSubscribed && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-dark-900/40 rounded-xl p-3 text-center">
-                <p className="text-xs text-gray-400 mb-0.5">Plan</p>
-                <p className="text-sm font-semibold text-white">{planName}</p>
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-dark-900/40 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-400 mb-0.5">Plan</p>
+                  <p className="text-sm font-semibold text-white">{planName}</p>
+                </div>
+                <div className="bg-dark-900/40 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-400 mb-0.5">Expires in</p>
+                  <p className="text-sm font-semibold text-neon-blue">{daysLeft} days</p>
+                </div>
               </div>
-              <div className="bg-dark-900/40 rounded-xl p-3 text-center">
-                <p className="text-xs text-gray-400 mb-0.5">Expires in</p>
-                <p className="text-sm font-semibold text-neon-blue">{daysLeft} days</p>
-              </div>
-            </div>
+              {onShowToast && (
+                <div className="pt-1 space-y-2">
+                  <p className="text-[11px] text-gray-500">Hit the 2-network limit? Reset here (same as VPN tab).</p>
+                  <GlowButton
+                    id="profile-reset-networks-btn"
+                    variant="secondary"
+                    fullWidth
+                    size="md"
+                    disabled={resetting}
+                    onClick={() => void handleResetNetworks()}
+                  >
+                    <RefreshCw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
+                    {resetting ? 'Resetting…' : 'Reset networks'}
+                  </GlowButton>
+                </div>
+              )}
+            </>
           )}
         </div>
       </GlassCard>

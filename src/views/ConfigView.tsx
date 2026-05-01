@@ -88,17 +88,24 @@ export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast, on
             <GlowButton id="copy-config-btn" onClick={handleCopy} fullWidth size="lg">
               {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Config URL</>}
             </GlowButton>
-            <GlowButton
-              id="reset-sub-devices-btn"
-              variant="ghost"
-              fullWidth
-              size="sm"
-              disabled={resetting}
-              onClick={() => void handleResetDevices()}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
-              {resetting ? 'Resetting…' : 'Reset allowed devices'}
-            </GlowButton>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-2">
+              <p className="text-xs font-medium text-white">New phone or Wi‑Fi blocked?</p>
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                Clears the 2-network limit so you can import the same link again.
+              </p>
+              <GlowButton
+                id="reset-sub-devices-btn"
+                variant="secondary"
+                fullWidth
+                size="md"
+                disabled={resetting}
+                onClick={() => void handleResetDevices()}
+              >
+                <RefreshCw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
+                {resetting ? 'Resetting…' : 'Reset networks'}
+              </GlowButton>
+            </div>
           </div>
         </GlassCard>
 

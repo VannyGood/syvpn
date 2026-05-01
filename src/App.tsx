@@ -317,6 +317,8 @@ function App() {
                 isSubscribed={isSubscribed}
                 daysLeft={daysLeft}
                 planName={planName}
+                onShowToast={showToast}
+                onSubscriptionRefreshed={refreshSubscription}
               />
             )}
           </motion.div>
