@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
-import axios from 'axios';
+import axios, { type AxiosResponse } from 'axios';
+import type { Request, Response } from 'express';
+import { env } from '../config/env.js';
 import { prisma } from '../config/prisma.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
@@ -87,6 +89,78 @@ function normalizeSubscriptionPayload(raw: Buffer, upstreamContentType: string):
   return { body: raw, contentType: upstreamContentType };
 }
 
+/** True when someone opens the link in a normal browser tab — show a clean page, not raw config. */
+function wantsHtmlBrowserPreview(req: Request): boolean {
+  if (req.query?.raw === '1' || req.query?.format === 'raw') return false;
+
+  const dest = req.headers['sec-fetch-dest'];
+  if (typeof dest === 'string' && dest.toLowerCase() === 'document') return true;
+
+  const accept = typeof req.headers.accept === 'string' ? req.headers.accept : '';
+  const first = accept.split(',')[0]?.trim().split(';')[0]?.trim().toLowerCase();
+  if (first === 'text/html') return true;
+
+  return false;
+}
+
+function forwardMarzbanSubscriptionHeaders(res: Response, upstreamHeaders: AxiosResponse['headers']): void {
+  const h = upstreamHeaders as Record<string, string | string[] | undefined>;
+  for (const key of Object.keys(h)) {
+    const lower = key.toLowerCase();
+    if (
+      lower === 'content-type' ||
+      lower === 'content-length' ||
+      lower === 'transfer-encoding' ||
+      lower === 'connection'
+    ) {
+      continue;
+    }
+    if (
+      lower.startsWith('subscription-') ||
+      lower.startsWith('profile-') ||
+      lower.startsWith('announce') ||
+      lower === 'support-url'
+    ) {
+      const v = h[key];
+      if (typeof v === 'string') res.setHeader(key, v);
+      else if (Array.isArray(v) && v.length > 0) res.setHeader(key, v[v.length - 1]!);
+    }
+  }
+}
+
+function subscriptionBrowserLandingHtml(expiresAt: Date): string {
+  const base = env.PUBLIC_BASE_URL.replace(/\/+$/g, '');
+  const mini = `${base}/mini/`;
+  const exp = expiresAt.toISOString().slice(0, 10);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>SYVPN</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: ui-sans-serif, system-ui, sans-serif; background: #07070f; color: #e4e4ef; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
+    .card { max-width: 22rem; width: 100%; background: rgba(255,255,255,.05); border-radius: 1rem; padding: 1.75rem 1.5rem; border: 1px solid rgba(255,255,255,.08); text-align: center; }
+    h1 { font-size: 1.125rem; font-weight: 600; margin: 0 0 .75rem; letter-spacing: -0.02em; }
+    p { color: #9ca3af; font-size: .8125rem; line-height: 1.55; margin: 0 0 .75rem; }
+    .muted { font-size: .75rem; color: #6b7280; margin-top: 1rem; }
+    a { color: #60a5fa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Subscription link</h1>
+    <p>This URL is meant to be pasted into <strong>Happ</strong> (or your VPN app) — not read in the browser.</p>
+    <p>Open <strong>SYVPN</strong> in Telegram, copy your config link there, and import it in Happ.</p>
+    <p class="muted">Valid through ${exp} · <a href="${mini}">Back to SYVPN</a></p>
+  </div>
+</body>
+</html>`;
+}
+
 /**
  * One clean URL per user: GET /sub/:token → Marzban subscription body.
  * Up to MAX_SUBSCRIPTION_DEVICES distinct public IPs (v2 fingerprints).
@@ -136,6 +210,11 @@ export const proxyPublicSubscription = asyncHandler(async (req, res) => {
     });
   }
 
+  if (wantsHtmlBrowserPreview(req)) {
+    res.status(200).type('html').send(subscriptionBrowserLandingHtml(sub.expiresAt));
+    return;
+  }
+
   const fetchUrl = resolveSubscriptionUpstreamUrl(sub.configUrl);
 
   let upstream;
@@ -149,6 +228,8 @@ export const proxyPublicSubscription = asyncHandler(async (req, res) => {
   } catch {
     throw new HttpError(502, 'Subscription upstream unavailable', true);
   }
+
+  forwardMarzbanSubscriptionHeaders(res, upstream.headers);
 
   const rawCt = upstream.headers['content-type'];
   const upstreamCt =
