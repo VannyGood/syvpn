@@ -54,6 +54,13 @@ export type BackendPlan = {
   duration_days: number;
 };
 
+export async function getMe() {
+  return request<{ id: string; telegram_id: string; username?: string | null; trial_claimed_at: string | null; created_at: string }>(
+    'GET',
+    '/me'
+  );
+}
+
 export async function telegramAuth(initData: string) {
   const resp = await request<{
     token: string;
@@ -71,7 +78,7 @@ export async function subscribe(planType: 'monthly' | 'yearly') {
   return request<{
     subscription: {
       id: string;
-      plan_type: 'monthly' | 'yearly';
+      plan_type: 'monthly' | 'yearly' | 'trial';
       status: 'active' | 'inactive';
       expires_at: string;
       config_url: string | null;
@@ -79,12 +86,24 @@ export async function subscribe(planType: 'monthly' | 'yearly') {
   }>('POST', '/subscribe', { plan_type: planType });
 }
 
+export async function claimTrial() {
+  return request<{
+    subscription: {
+      id: string;
+      plan_type: 'trial';
+      status: 'active' | 'inactive';
+      expires_at: string;
+      config_url: string | null;
+    };
+  }>('POST', '/trial/claim', {});
+}
+
 export async function getConfig() {
   return request<{
     config_url: string;
     max_devices?: number;
     expires_at: string;
-    plan_type: 'monthly' | 'yearly';
+    plan_type: 'monthly' | 'yearly' | 'trial';
   }>('GET', '/config');
 }
 

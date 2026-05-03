@@ -10,6 +10,8 @@ interface ConfigViewProps {
   isSubscribed: boolean;
   configUrl?: string;
   onBuyPlan: (plan: string) => void;
+  onClaimTrial?: () => void;
+  trialAvailable?: boolean;
   onShowToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onSubscriptionRefreshed?: () => Promise<void>;
 }
@@ -27,7 +29,15 @@ const steps = [
   { n: 5, title: 'Connect & Enjoy', desc: 'Browse securely!', icon: Shield },
 ];
 
-export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast, onSubscriptionRefreshed }: ConfigViewProps) {
+export function ConfigView({
+  isSubscribed,
+  configUrl,
+  onBuyPlan,
+  onClaimTrial,
+  trialAvailable,
+  onShowToast,
+  onSubscriptionRefreshed,
+}: ConfigViewProps) {
   const [copied, setCopied] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('1month');
   const [resetting, setResetting] = useState(false);
@@ -148,6 +158,18 @@ export function ConfigView({ isSubscribed, configUrl, onBuyPlan, onShowToast, on
         <h2 className="text-xl font-bold text-white">Choose Your Plan</h2>
         <p className="text-sm text-gray-400 mt-1">Premium VPN access, no limits</p>
       </div>
+
+      {trialAvailable && onClaimTrial && (
+        <GlassCard glow glowColor="blue">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-white">Free 1‑day trial</p>
+            <p className="text-[11px] text-gray-500">New here? Claim a free 24‑hour plan and get your config instantly.</p>
+            <GlowButton id="claim-trial-btn" onClick={onClaimTrial} fullWidth size="lg">
+              Claim free trial
+            </GlowButton>
+          </div>
+        </GlassCard>
+      )}
 
       <div className="space-y-3">
         {plans.map((plan, i) => (

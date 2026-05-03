@@ -155,3 +155,59 @@ export const resetSubDevices = asyncHandler(async (req, res) => {
   res.json({ ok: true });
 });
 
+export const claimTrial = asyncHandler(async (req, res) => {
+  if (!req.user) throw new HttpError(401, 'Unauthorized');
+
+  const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
+  if (!user) throw new HttpError(404, 'User not found');
+
+  if (user.trialClaimedAt) throw new HttpError(400, 'Trial already claimed');
+
+  const active = await prisma.subscription.findFirst({
+    where: { userId: user.id, status: 'active' },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (active) throw new HttpError(400, 'You already have an active plan');
+
+  const now = new Date();
+  const expiresAt = addDays(now, 1);
+
+  const sub = await prisma.subscription.create({
+    data: {
+      userId: user.id,
+      planType: 'trial' as any,
+      status: 'inactive',
+      expiresAt,
+    },
+  });
+
+  const marzbanUsername = marzbanUsernameForSubscription(user.telegramId, sub.id);
+  const created = await marzban.createUser({ username: marzbanUsername, expireAt: expiresAt });
+
+  const updated = await prisma.subscription.update({
+    where: { id: sub.id },
+    data: {
+      status: 'active',
+      marzbanUserId: created.marzbanUserId,
+      configUrl: created.subscriptionUrl,
+    },
+  });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { trialClaimedAt: now },
+  });
+
+  const pubToken = await ensurePublicSubToken(updated.id);
+
+  res.json({
+    subscription: {
+      id: updated.id,
+      plan_type: updated.planType,
+      status: updated.status,
+      expires_at: updated.expiresAt,
+      config_url: publicSubscriptionUrl(pubToken),
+    },
+  });
+});
+

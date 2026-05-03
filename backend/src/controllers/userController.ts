@@ -10,6 +10,7 @@ export const me = asyncHandler(async (req, res) => {
     id: user.id,
     telegram_id: user.telegramId,
     username: user.username,
+    trial_claimed_at: user.trialClaimedAt,
     created_at: user.createdAt,
   });
 });

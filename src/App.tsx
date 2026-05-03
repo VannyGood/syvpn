@@ -11,7 +11,9 @@ import { ConfigView } from './views/ConfigView';
 import { ProfileView } from './views/ProfileView';
 import './index.css';
 import {
+  claimTrial,
   getConfig,
+  getMe,
   getToken,
   getWallet,
   getWalletTransactions,
@@ -90,6 +92,7 @@ function App() {
   const [username, setUsername] = useState('user');
   const [firstName, setFirstName] = useState('');
   const [configUrl, setConfigUrl] = useState<string | undefined>(undefined);
+  const [trialAvailable, setTrialAvailable] = useState(false);
   // Wallet txs are fetched to keep balance authoritative after purchases/deposits.
   // WalletView will fetch its own list for now; we keep this for future wiring.
   const [, setWalletTxs] = useState<Awaited<ReturnType<typeof getWalletTransactions>>['transactions']>([]);
@@ -133,7 +136,7 @@ function App() {
       setIsSubscribed(true);
       setConfigUrl(cfg.config_url);
       setDaysLeft(daysUntil(cfg.expires_at));
-      setPlanName(cfg.plan_type === 'yearly' ? '1 Year' : '1 Month');
+      setPlanName(cfg.plan_type === 'yearly' ? '1 Year' : cfg.plan_type === 'trial' ? 'Free Trial' : '1 Month');
     } catch {
       setIsSubscribed(false);
       setConfigUrl(undefined);
@@ -170,6 +173,13 @@ function App() {
         if (!cancelled) setWalletTxs(txResp.transactions);
       } catch {
         // ok
+      }
+
+      try {
+        const me = await getMe();
+        if (!cancelled) setTrialAvailable(!me.trial_claimed_at);
+      } catch {
+        if (!cancelled) setTrialAvailable(false);
       }
 
       await refreshSubscription();
@@ -216,11 +226,29 @@ function App() {
       setConfigUrl(url);
       setDaysLeft(daysUntil(expiresAt));
       setPlanName(planType === 'yearly' ? '1 Year' : '1 Month');
+      setTrialAvailable(false);
       showToast(`${plan.name} plan activated!`, 'success');
     } catch (e) {
       showToast((e as Error).message || 'Failed to subscribe', 'error');
     }
   }, [balance, showToast]);
+
+  const handleClaimTrial = useCallback(async () => {
+    try {
+      showToast('Claiming free trial…', 'info');
+      const resp = await claimTrial();
+      const expiresAt = resp.subscription.expires_at;
+      const url = resp.subscription.config_url ?? undefined;
+      setIsSubscribed(true);
+      setConfigUrl(url);
+      setDaysLeft(daysUntil(expiresAt));
+      setPlanName('Free Trial');
+      setTrialAvailable(false);
+      showToast('Free trial activated!', 'success');
+    } catch (e) {
+      showToast((e as Error).message || 'Could not claim trial', 'error');
+    }
+  }, [showToast]);
 
   const handleNavigate = useCallback((tab: TabId) => {
     setActiveTab(tab);
@@ -306,6 +334,8 @@ function App() {
                 isSubscribed={isSubscribed}
                 configUrl={configUrl}
                 onBuyPlan={handleBuyPlan}
+                onClaimTrial={handleClaimTrial}
+                trialAvailable={trialAvailable}
                 onShowToast={showToast}
                 onSubscriptionRefreshed={refreshSubscription}
               />
