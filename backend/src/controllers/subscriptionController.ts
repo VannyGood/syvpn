@@ -12,8 +12,9 @@ function addDays(date: Date, days: number) {
   return d;
 }
 
-function marzbanUsernameForSubscription(telegramId: string, subscriptionId: string) {
-  return `tg_${telegramId}_${subscriptionId.slice(0, 8)}`;
+function marzbanUsernameForSubscription(telegramId: string, subscriptionId: string, kind: 'trial' | 'paid') {
+  const base = `tg_${telegramId}_${subscriptionId.slice(0, 8)}`;
+  return kind === 'trial' ? `trial_${base}` : base;
 }
 
 export const subscribe = asyncHandler(async (req, res) => {
@@ -24,6 +25,15 @@ export const subscribe = asyncHandler(async (req, res) => {
 
   const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
   if (!user) throw new HttpError(404, 'User not found');
+
+  // Upgrade path: allow buying while trial is active.
+  const currentActive = await prisma.subscription.findFirst({
+    where: { userId: user.id, status: 'active' },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (currentActive && currentActive.planType !== ('trial' as any)) {
+    throw new HttpError(400, 'You already have an active plan');
+  }
 
   // Wallet check (paid deposits - paid purchases)
   const [deposits, purchases] = await Promise.all([
@@ -42,6 +52,14 @@ export const subscribe = asyncHandler(async (req, res) => {
   const now = new Date();
   const expiresAt = addDays(now, plan.days);
 
+  // If trial is active, deactivate it so getConfig returns the paid plan.
+  if (currentActive && currentActive.planType === ('trial' as any)) {
+    await prisma.subscription.update({
+      where: { id: currentActive.id },
+      data: { status: 'inactive' },
+    });
+  }
+
   // Create subscription record first (inactive) then activate after Marzban succeeds
   const sub = await prisma.subscription.create({
     data: {
@@ -53,7 +71,7 @@ export const subscribe = asyncHandler(async (req, res) => {
   });
 
   // Create Marzban user + fetch config
-  const marzbanUsername = marzbanUsernameForSubscription(user.telegramId, sub.id);
+  const marzbanUsername = marzbanUsernameForSubscription(user.telegramId, sub.id, 'paid');
   const created = await marzban.createUser({ username: marzbanUsername, expireAt: expiresAt });
 
   const updated = await prisma.subscription.update({
@@ -103,7 +121,10 @@ export const getConfig = asyncHandler(async (req, res) => {
 
   if (!sub?.configUrl || !sub.user) throw new HttpError(404, 'No active subscription/config');
 
-  const mbUser = marzbanUsernameForSubscription(sub.user.telegramId, sub.id);
+  const mbUser =
+    (sub.planType as any) === 'trial'
+      ? marzbanUsernameForSubscription(sub.user.telegramId, sub.id, 'trial')
+      : marzbanUsernameForSubscription(sub.user.telegramId, sub.id, 'paid');
   let remote = await marzban.fetchUserRemote(mbUser);
   if (!remote && sub.marzbanUserId && sub.marzbanUserId !== mbUser) {
     remote = await marzban.fetchUserRemote(sub.marzbanUserId);
@@ -181,7 +202,7 @@ export const claimTrial = asyncHandler(async (req, res) => {
     },
   });
 
-  const marzbanUsername = marzbanUsernameForSubscription(user.telegramId, sub.id);
+  const marzbanUsername = marzbanUsernameForSubscription(user.telegramId, sub.id, 'trial');
   const created = await marzban.createUser({ username: marzbanUsername, expireAt: expiresAt });
 
   const updated = await prisma.subscription.update({

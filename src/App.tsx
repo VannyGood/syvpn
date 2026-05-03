@@ -89,6 +89,7 @@ function App() {
   const [balance, setBalance] = useState(0);
   const [daysLeft, setDaysLeft] = useState(0);
   const [planName, setPlanName] = useState('');
+  const [planType, setPlanType] = useState<'monthly' | 'yearly' | 'trial' | ''>('');
   const [username, setUsername] = useState('user');
   const [firstName, setFirstName] = useState('');
   const [configUrl, setConfigUrl] = useState<string | undefined>(undefined);
@@ -137,11 +138,13 @@ function App() {
       setConfigUrl(cfg.config_url);
       setDaysLeft(daysUntil(cfg.expires_at));
       setPlanName(cfg.plan_type === 'yearly' ? '1 Year' : cfg.plan_type === 'trial' ? 'Free Trial' : '1 Month');
+      setPlanType(cfg.plan_type);
     } catch {
       setIsSubscribed(false);
       setConfigUrl(undefined);
       setDaysLeft(0);
       setPlanName('');
+      setPlanType('');
     }
   }, []);
 
@@ -226,6 +229,7 @@ function App() {
       setConfigUrl(url);
       setDaysLeft(daysUntil(expiresAt));
       setPlanName(planType === 'yearly' ? '1 Year' : '1 Month');
+      setPlanType(planType);
       setTrialAvailable(false);
       showToast(`${plan.name} plan activated!`, 'success');
     } catch (e) {
@@ -243,6 +247,7 @@ function App() {
       setConfigUrl(url);
       setDaysLeft(daysUntil(expiresAt));
       setPlanName('Free Trial');
+      setPlanType('trial');
       setTrialAvailable(false);
       showToast('Free trial activated!', 'success');
     } catch (e) {
@@ -336,6 +341,7 @@ function App() {
                 onBuyPlan={handleBuyPlan}
                 onClaimTrial={handleClaimTrial}
                 trialAvailable={trialAvailable}
+                isTrial={planType === 'trial'}
                 onShowToast={showToast}
                 onSubscriptionRefreshed={refreshSubscription}
               />

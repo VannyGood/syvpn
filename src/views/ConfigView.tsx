@@ -12,6 +12,7 @@ interface ConfigViewProps {
   onBuyPlan: (plan: string) => void;
   onClaimTrial?: () => void;
   trialAvailable?: boolean;
+  isTrial?: boolean;
   onShowToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onSubscriptionRefreshed?: () => Promise<void>;
 }
@@ -35,12 +36,14 @@ export function ConfigView({
   onBuyPlan,
   onClaimTrial,
   trialAvailable,
+  isTrial,
   onShowToast,
   onSubscriptionRefreshed,
 }: ConfigViewProps) {
   const [copied, setCopied] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('1month');
   const [resetting, setResetting] = useState(false);
+  const [upgradeMode, setUpgradeMode] = useState(false);
 
   const displayConfigUrl = (() => {
     return configUrl;
@@ -70,7 +73,7 @@ export function ConfigView({
     }
   };
 
-  if (isSubscribed) {
+  if (isSubscribed && !upgradeMode) {
     return (
       <div className="space-y-5">
         <div className="text-center pt-2">
@@ -98,6 +101,18 @@ export function ConfigView({
             <GlowButton id="copy-config-btn" onClick={handleCopy} fullWidth size="lg">
               {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Config URL</>}
             </GlowButton>
+
+            {isTrial && (
+              <GlowButton
+                id="upgrade-from-trial-btn"
+                variant="secondary"
+                fullWidth
+                size="md"
+                onClick={() => setUpgradeMode(true)}
+              >
+                Upgrade to a paid plan
+              </GlowButton>
+            )}
 
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-2">
               <p className="text-xs font-medium text-white">New phone or Wi‑Fi blocked?</p>
@@ -145,6 +160,57 @@ export function ConfigView({
             })}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Upgrade mode (trial users) reuses the plan picker UI.
+  if (isSubscribed && upgradeMode) {
+    return (
+      <div className="space-y-5">
+        <div className="text-center pt-2">
+          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-neon-purple/10 border border-neon-purple/20 flex items-center justify-center">
+            <Sparkles className="w-7 h-7 text-neon-purple" />
+          </div>
+          <h2 className="text-xl font-bold text-white">Upgrade your plan</h2>
+          <p className="text-sm text-gray-400 mt-1">Your trial stays active until the paid plan is created.</p>
+        </div>
+
+        <div className="space-y-3">
+          {plans.map((plan, i) => (
+            <motion.div key={plan.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.08 }}>
+              <GlassCard
+                onClick={() => setSelectedPlan(plan.id)}
+                glow={selectedPlan === plan.id}
+                glowColor={plan.popular ? 'blue' : 'purple'}
+                className={`transition-all duration-200 ${selectedPlan === plan.id ? '!border-neon-blue/40' : ''} ${plan.popular ? 'relative' : ''}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPlan === plan.id ? 'border-neon-blue bg-neon-blue' : 'border-gray-600'}`}>
+                      {selectedPlan === plan.id && <Check className="w-3 h-3 text-dark-900" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">{plan.name}</p>
+                      {plan.discount && <span className="text-[10px] font-semibold text-neon-green">{plan.discount}</span>}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-white">${plan.price.toFixed(2)}</p>
+                    {plan.originalPrice && <p className="text-[11px] text-gray-500 line-through">${plan.originalPrice.toFixed(2)}</p>}
+                  </div>
+                </div>
+              </GlassCard>
+            </motion.div>
+          ))}
+        </div>
+
+        <GlowButton id="upgrade-buy-plan-btn" onClick={() => onBuyPlan(selectedPlan)} fullWidth size="lg">
+          Upgrade now <ChevronRight className="w-4 h-4" />
+        </GlowButton>
+        <GlowButton id="upgrade-cancel-btn" variant="ghost" onClick={() => setUpgradeMode(false)} fullWidth size="sm">
+          Back
+        </GlowButton>
       </div>
     );
   }
