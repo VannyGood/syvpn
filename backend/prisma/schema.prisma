@@ -41,11 +41,17 @@ model User {
   telegramId String         @unique @map("telegram_id")
   username   String?
   trialClaimedAt DateTime?  @map("trial_claimed_at")
+  referralCode String?      @unique @map("referral_code")
+  referredById String?      @map("referred_by_id")
+  referralRewardedAt DateTime? @map("referral_rewarded_at")
   createdAt  DateTime       @default(now()) @map("created_at")
 
   subscriptions Subscription[]
   transactions  Transaction[]
+  referredBy User? @relation("UserReferrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals  User[] @relation("UserReferrals")
 
+  @@index([referredById])
   @@map("users")
 }
 

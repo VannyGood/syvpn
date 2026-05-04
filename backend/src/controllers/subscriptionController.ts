@@ -98,6 +98,33 @@ export const subscribe = asyncHandler(async (req, res) => {
     },
   });
 
+  // Referral reward: when a referred user makes their first paid purchase, extend referrer by +15 days.
+  if (user.referredById && !user.referralRewardedAt) {
+    const referrerSub = await prisma.subscription.findFirst({
+      where: { userId: user.referredById, status: 'active' },
+      orderBy: { createdAt: 'desc' },
+      include: { user: true },
+    });
+    if (referrerSub?.user) {
+      const newExpire = addDays(referrerSub.expiresAt, 15);
+      await prisma.subscription.update({
+        where: { id: referrerSub.id },
+        data: { expiresAt: newExpire },
+      });
+      // Best-effort update in Marzban (so the user actually gets extra days).
+      const mbName =
+        (referrerSub.planType as any) === 'trial'
+          ? marzbanUsernameForSubscription(referrerSub.user.telegramId, referrerSub.id, 'trial')
+          : marzbanUsernameForSubscription(referrerSub.user.telegramId, referrerSub.id, 'paid');
+      void marzban.setUserExpire(mbName, newExpire);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { referralRewardedAt: new Date() },
+      });
+    }
+  }
+
   res.json({
     subscription: {
       id: updated.id,

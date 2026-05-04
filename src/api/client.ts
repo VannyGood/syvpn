@@ -55,17 +55,21 @@ export type BackendPlan = {
 };
 
 export async function getMe() {
-  return request<{ id: string; telegram_id: string; username?: string | null; trial_claimed_at: string | null; created_at: string }>(
-    'GET',
-    '/me'
-  );
+  return request<{
+    id: string;
+    telegram_id: string;
+    username?: string | null;
+    trial_claimed_at: string | null;
+    referral_code: string | null;
+    created_at: string;
+  }>('GET', '/me');
 }
 
-export async function telegramAuth(initData: string) {
+export async function telegramAuth(initData: string, input?: { referralCode?: string | null }) {
   const resp = await request<{
     token: string;
     user: { id: string; telegram_id: string; username?: string | null };
-  }>('POST', '/auth/telegram', { initData });
+  }>('POST', '/auth/telegram', { initData, referralCode: input?.referralCode ?? undefined });
   setToken(resp.token);
   return resp;
 }

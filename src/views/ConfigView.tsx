@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Copy, Check, Download, Smartphone, Globe, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
+import { Shield, Copy, Check, Download, Smartphone, Globe, ChevronRight, Sparkles } from 'lucide-react';
 import { GlassCard } from '../components/GlassCard';
 import { GlowButton } from '../components/GlowButton';
 import { copyText } from '../utils/copyText';
-import { resetSubDevices } from '../api/client';
 
 interface ConfigViewProps {
   isSubscribed: boolean;
@@ -38,11 +37,9 @@ export function ConfigView({
   trialAvailable,
   isTrial,
   onShowToast,
-  onSubscriptionRefreshed,
 }: ConfigViewProps) {
   const [copied, setCopied] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('1month');
-  const [resetting, setResetting] = useState(false);
   const [upgradeMode, setUpgradeMode] = useState(false);
 
   const displayConfigUrl = (() => {
@@ -58,19 +55,6 @@ export function ConfigView({
     setCopied(true);
     onShowToast('Config URL copied!', 'success');
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleResetDevices = async () => {
-    setResetting(true);
-    try {
-      await resetSubDevices();
-      onShowToast('Device list cleared. You can import again on a new phone or Wi‑Fi.', 'success');
-      await onSubscriptionRefreshed?.();
-    } catch (e) {
-      onShowToast((e as Error).message || 'Could not reset devices', 'error');
-    } finally {
-      setResetting(false);
-    }
   };
 
   if (isSubscribed && !upgradeMode) {
@@ -113,24 +97,6 @@ export function ConfigView({
                 Upgrade to a paid plan
               </GlowButton>
             )}
-
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-2">
-              <p className="text-xs font-medium text-white">New phone or Wi‑Fi blocked?</p>
-              <p className="text-[11px] text-gray-500 leading-relaxed">
-                Clears the 2-network limit so you can import the same link again.
-              </p>
-              <GlowButton
-                id="reset-sub-devices-btn"
-                variant="secondary"
-                fullWidth
-                size="md"
-                disabled={resetting}
-                onClick={() => void handleResetDevices()}
-              >
-                <RefreshCw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
-                {resetting ? 'Resetting…' : 'Reset networks'}
-              </GlowButton>
-            </div>
           </div>
         </GlassCard>
 

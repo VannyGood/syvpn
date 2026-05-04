@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { User, Shield, HelpCircle, MessageCircle, ChevronDown, RefreshCw } from 'lucide-react';
+import { User, Shield, HelpCircle, MessageCircle, ChevronDown, RefreshCw, Copy } from 'lucide-react';
 import { GlassCard } from '../components/GlassCard';
 import { GlowButton } from '../components/GlowButton';
 import { resetSubDevices } from '../api/client';
+import { copyText } from '../utils/copyText';
 
 interface ProfileViewProps {
   username: string;
@@ -11,6 +12,7 @@ interface ProfileViewProps {
   isSubscribed: boolean;
   daysLeft: number;
   planName: string;
+  referralCode?: string | null;
   onShowToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
   onSubscriptionRefreshed?: () => Promise<void>;
 }
@@ -21,6 +23,7 @@ export function ProfileView({
   isSubscribed,
   daysLeft,
   planName,
+  referralCode,
   onShowToast,
   onSubscriptionRefreshed,
 }: ProfileViewProps) {
@@ -41,6 +44,18 @@ export function ProfileView({
       setResetting(false);
     }
   };
+
+  const referralLink = (() => {
+    try {
+      const origin = window.location.origin;
+      // Mini app base is /mini/
+      const base = `${origin}/mini/`;
+      if (!referralCode) return '';
+      return `${base}?ref=${encodeURIComponent(referralCode)}`;
+    } catch {
+      return '';
+    }
+  })();
 
   const faqItems = [
     {
@@ -127,6 +142,37 @@ export function ProfileView({
               )}
             </>
           )}
+        </div>
+      </GlassCard>
+
+      {/* Referral */}
+      <GlassCard glow glowColor="purple">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-white">Referral</span>
+            <span className="text-[11px] text-gray-500">+15 days</span>
+          </div>
+          <p className="text-[11px] text-gray-500">
+            Share your link. If your friend pays for a plan, you get <span className="text-gray-300 font-semibold">15 days</span> added.
+          </p>
+          <div className="bg-dark-900/60 rounded-xl p-3">
+            <code className="text-xs text-neon-blue/80 font-mono break-all leading-relaxed block max-h-20 overflow-y-auto">
+              {referralLink || 'Referral link unavailable'}
+            </code>
+          </div>
+          <GlowButton
+            id="copy-referral-link-btn"
+            variant="secondary"
+            fullWidth
+            size="md"
+            onClick={() => {
+              if (!referralLink) return;
+              void copyText(referralLink);
+              onShowToast?.('Referral link copied!', 'success');
+            }}
+          >
+            <Copy className="w-4 h-4" /> Copy referral link
+          </GlowButton>
         </div>
       </GlassCard>
 

@@ -54,6 +54,30 @@ function getTelegramUser(): { username?: string; first_name?: string } | undefin
   return undefined;
 }
 
+function getReferralCodeFromContext(): string | null {
+  // 1) URL param for web / deep links
+  try {
+    const url = new URL(window.location.href);
+    const ref = url.searchParams.get('ref');
+    if (ref && ref.trim().length > 0) return ref.trim();
+  } catch {}
+
+  // 2) Telegram start_param (when opening mini app via /start <payload>)
+  try {
+    const w = window as any;
+    const sp = w?.Telegram?.WebApp?.initDataUnsafe?.start_param ?? (WebApp as any)?.initDataUnsafe?.start_param;
+    if (typeof sp === 'string' && sp.trim().length > 0) return sp.trim();
+  } catch {}
+
+  // 3) Persisted from earlier open
+  try {
+    const stored = localStorage.getItem('syvpn_referral_code');
+    if (stored && stored.trim().length > 0) return stored.trim();
+  } catch {}
+
+  return null;
+}
+
 function BrowserLanding() {
   const botUrl = 'https://t.me/SenYuvpn_bot';
   return (
@@ -94,6 +118,7 @@ function App() {
   const [firstName, setFirstName] = useState('');
   const [configUrl, setConfigUrl] = useState<string | undefined>(undefined);
   const [trialAvailable, setTrialAvailable] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
   // Wallet txs are fetched to keep balance authoritative after purchases/deposits.
   // WalletView will fetch its own list for now; we keep this for future wiring.
   const [, setWalletTxs] = useState<Awaited<ReturnType<typeof getWalletTransactions>>['transactions']>([]);
@@ -155,7 +180,13 @@ function App() {
       try {
         const initData = getTelegramInitData();
         if (initData) {
-          const authResp = await telegramAuth(initData);
+          const ref = getReferralCodeFromContext();
+          if (ref) {
+            try {
+              localStorage.setItem('syvpn_referral_code', ref);
+            } catch {}
+          }
+          const authResp = await telegramAuth(initData, { referralCode: ref });
           // If Telegram user fields are missing for any reason, use backend user.
           if (!cancelled) {
             const tg = getTelegramUser();
@@ -181,8 +212,10 @@ function App() {
       try {
         const me = await getMe();
         if (!cancelled) setTrialAvailable(!me.trial_claimed_at);
+        if (!cancelled) setReferralCode(me.referral_code ?? null);
       } catch {
         if (!cancelled) setTrialAvailable(false);
+        if (!cancelled) setReferralCode(null);
       }
 
       await refreshSubscription();
@@ -353,6 +386,7 @@ function App() {
                 isSubscribed={isSubscribed}
                 daysLeft={daysLeft}
                 planName={planName}
+                referralCode={referralCode}
                 onShowToast={showToast}
                 onSubscriptionRefreshed={refreshSubscription}
               />

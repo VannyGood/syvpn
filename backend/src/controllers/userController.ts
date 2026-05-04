@@ -11,6 +11,9 @@ export const me = asyncHandler(async (req, res) => {
     telegram_id: user.telegramId,
     username: user.username,
     trial_claimed_at: user.trialClaimedAt,
+    referral_code: user.referralCode,
+    referred_by_id: user.referredById,
+    referral_rewarded_at: user.referralRewardedAt,
     created_at: user.createdAt,
   });
 });

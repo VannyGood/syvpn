@@ -163,6 +163,32 @@ export class MarzbanService {
       return null;
     }
   }
+
+  /**
+   * Extends/sets user expiry in Marzban. Endpoint shape differs by versions; we try PATCH then PUT.
+   * Returns true if an update request succeeded.
+   */
+  async setUserExpire(username: string, expireAt: Date): Promise<boolean> {
+    const http = await this.authed();
+    const expire = Math.floor(expireAt.getTime() / 1000);
+
+    const path = `/api/user/${encodeURIComponent(username)}`;
+    const payload = { expire };
+
+    try {
+      await http.patch(path, payload);
+      return true;
+    } catch {
+      // fall through
+    }
+
+    try {
+      await http.put(path, payload);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 export const marzban = new MarzbanService();
