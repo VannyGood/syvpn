@@ -47,11 +47,9 @@ export function ProfileView({
 
   const referralLink = (() => {
     try {
-      const origin = window.location.origin;
-      // Mini app base is /mini/
-      const base = `${origin}/mini/`;
       if (!referralCode) return '';
-      return `${base}?ref=${encodeURIComponent(referralCode)}`;
+      // Telegram deep link into bot + mini app
+      return `https://t.me/SenYuvpn_bot?startapp=${encodeURIComponent(`ref_${referralCode}`)}`;
     } catch {
       return '';
     }

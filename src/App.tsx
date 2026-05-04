@@ -66,7 +66,12 @@ function getReferralCodeFromContext(): string | null {
   try {
     const w = window as any;
     const sp = w?.Telegram?.WebApp?.initDataUnsafe?.start_param ?? (WebApp as any)?.initDataUnsafe?.start_param;
-    if (typeof sp === 'string' && sp.trim().length > 0) return sp.trim();
+    if (typeof sp === 'string' && sp.trim().length > 0) {
+      const raw = sp.trim();
+      // We use startapp payloads like: ref_<code>
+      if (raw.startsWith('ref_')) return raw.slice(4);
+      return raw;
+    }
   } catch {}
 
   // 3) Persisted from earlier open
