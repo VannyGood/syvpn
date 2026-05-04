@@ -122,9 +122,12 @@ export function ProfileView({
                   <p className="text-sm font-semibold text-neon-blue">{daysLeft} days</p>
                 </div>
               </div>
+              <p className="text-[11px] text-gray-500">
+                Same Wi‑Fi counts as one network (browser + Happ OK). A third different network is blocked until you reset below.
+              </p>
               {onShowToast && (
                 <div className="pt-1 space-y-2">
-                  <p className="text-[11px] text-gray-500">Hit the 2-network limit? Reset here (same as VPN tab).</p>
+                  <p className="text-[11px] text-gray-500">Hit the 2-network limit? Reset here.</p>
                   <GlowButton
                     id="profile-reset-networks-btn"
                     variant="secondary"

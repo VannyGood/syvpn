@@ -74,9 +74,6 @@ export function ConfigView({
               <span className="text-xs font-medium text-gray-400">Subscription link</span>
               <span className="status-active px-2 py-0.5 rounded-md text-[10px] font-semibold">ACTIVE</span>
             </div>
-            <p className="text-[11px] text-gray-500">
-              Same Wi‑Fi counts as one network (browser + Happ OK). A third different network is blocked until you reset below.
-            </p>
             <div className="bg-dark-900/60 rounded-xl p-3">
               <code className="text-xs text-neon-blue/80 font-mono break-all leading-relaxed block max-h-24 overflow-y-auto">
                 {displayConfigUrl ?? 'No config found yet.'}
