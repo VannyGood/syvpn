@@ -1,107 +1,220 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0a0a1a" />
-    <meta
-      name="description"
-      content="SY VPN — fast, private VPN. Subscribe in Telegram, connect with Happ."
-    />
-    <title>SY VPN</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <div class="page-bg" aria-hidden="true"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SY VPN — Fast, private VPN for Telegram Mini App</title>
+  <meta name="description" content="SY VPN — secure VPN access inside Telegram. Plans from $2.99/mo. Open the mini app and connect in seconds." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="/logo.png" type="image/png" />
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-glow bg-glow-1" aria-hidden="true"></div>
+  <div class="bg-glow bg-glow-2" aria-hidden="true"></div>
 
-    <main>
-      <header class="nav">
-        <a class="brand" href="/">
-          <span class="brand-mark" aria-hidden="true">⚡</span>
-          <span>SY VPN</span>
-        </a>
-        <nav class="nav-links" aria-label="Primary">
-          <a href="#features">Features</a>
-          <a href="#pricing">Plans</a>
-          <a href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">Telegram</a>
-          <a href="/mini/">Open app</a>
-        </nav>
-      </header>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#top" id="top">
+        <img class="brand-logo" src="/logo.png" alt="SY VPN" decoding="async" fetchpriority="high" />
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-ghost" href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">Open in Telegram</a>
+        <a class="btn btn-primary" href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">Get started</a>
+      </div>
+    </div>
+  </header>
 
-      <section class="hero" id="top">
-        <div class="pill"><span class="pill-dot" aria-hidden="true"></span> Built for Telegram</div>
-        <h1>
-          Privacy that feels <span class="gradient">effortless</span>
+  <main>
+    <section class="hero">
+      <div class="hero-inner">
+        <p class="hero-kicker">
+          <span class="kicker-dot" aria-hidden="true"></span>
+          Built for Telegram Mini App
+        </p>
+        <h1 class="hero-title">
+          VPN that feels <span class="text-gradient">instant</span>, not invasive.
         </h1>
-        <p class="lead">
-          Subscribe from the SY VPN mini app, copy your subscription link, and connect in
-          <strong style="color: #e2e8f0">Happ</strong> — same neon look you already love, now on the web.
+        <p class="hero-lead">
+          Subscribe in-app, pick a plan, connect. No clutter — just a clean tunnel and servers tuned for real-world latency.
         </p>
-        <div class="cta-row">
-          <a class="btn btn-primary" href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">
-            Open in Telegram
+        <div class="hero-cta">
+          <a class="btn btn-primary btn-lg" href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">
+            Launch SY VPN
+            <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
-          <a class="btn btn-ghost" href="/mini/">Open mini app</a>
+          <a class="btn btn-outline btn-lg" href="#pricing">View plans</a>
         </div>
-      </section>
-
-      <section id="features">
-        <h2 class="section-title">Why SY VPN</h2>
-        <p class="section-sub">Modern stack, clean subscription flow, and support when you need it.</p>
-        <div class="cards">
-          <article class="card">
-            <div class="card-icon icon-blue" aria-hidden="true">🛡</div>
-            <h3>Strong encryption</h3>
-            <p>Protect your traffic on Wi‑Fi and mobile data with a profile tuned for real-world clients.</p>
-          </article>
-          <article class="card">
-            <div class="card-icon icon-purple" aria-hidden="true">⚡</div>
-            <h3>Low-latency servers</h3>
-            <p>Pick the region that fits you. Your subscription can include multiple endpoints as you grow.</p>
-          </article>
-          <article class="card">
-            <div class="card-icon icon-green" aria-hidden="true">✓</div>
-            <h3>Simple setup</h3>
-            <p>One subscription URL — import in Happ, tap connect, done. Reset networks from your profile if you switch devices.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="pricing">
-        <h2 class="section-title">Plans</h2>
-        <p class="section-sub">Shown for visitors — actual purchase happens inside the mini app with your wallet.</p>
-        <div class="pricing">
-          <div class="price-card">
-            <h3>1 Month</h3>
-            <p class="price">$2.99 <span>/ mo</span></p>
-            <p style="margin: 0.5rem 0 0; font-size: 0.85rem; color: #94a3b8">Flexible, great to try.</p>
+        <dl class="hero-stats">
+          <div class="stat">
+            <dt class="stat-label">From</dt>
+            <dd class="stat-value">$2.99<span class="stat-unit">/mo</span></dd>
           </div>
-          <div class="price-card featured">
-            <h3>1 Year</h3>
-            <span class="badge">Best value</span>
-            <p class="price">$32 <span>/ yr</span></p>
-            <p style="margin: 0.5rem 0 0; font-size: 0.85rem; color: #94a3b8">Long-term peace of mind.</p>
+          <div class="stat">
+            <dt class="stat-label">Checkout</dt>
+            <dd class="stat-value">In-app</dd>
+          </div>
+          <div class="stat">
+            <dt class="stat-label">Platform</dt>
+            <dd class="stat-value">Telegram</dd>
+          </div>
+        </dl>
+      </div>
+      <div class="hero-panel" aria-hidden="true">
+        <div class="panel-glass">
+          <div class="panel-header">
+            <span class="panel-dot"></span><span class="panel-dot"></span><span class="panel-dot"></span>
+            <span class="panel-title">syvpn · connected</span>
+          </div>
+          <div class="panel-body">
+            <div class="panel-row">
+              <span class="mono">endpoint</span>
+              <span class="mono dim">fra-01.syvpn</span>
+            </div>
+            <div class="panel-row">
+              <span class="mono">latency</span>
+              <span class="mono accent">24 ms</span>
+            </div>
+            <div class="panel-bar"><span class="panel-bar-fill"></span></div>
+            <p class="panel-caption">Illustrative UI — actual speeds vary by network.</p>
           </div>
         </div>
-        <p style="margin-top: 1.25rem; text-align: center; font-size: 0.85rem; color: #64748b">
-          Ready? <a href="/mini/" style="color: #00f0ff; text-decoration: none; font-weight: 600">Open the mini app</a>
-          or start from
-          <a href="https://t.me/SenYuvpn_bot" style="color: #00f0ff; text-decoration: none; font-weight: 600">Telegram</a>.
-        </p>
-      </section>
+      </div>
+    </section>
 
-      <footer>
-        <p>
-          © SY VPN ·
-          <a href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">@SenYuvpn_bot</a>
-        </p>
-      </footer>
-    </main>
-  </body>
+    <section class="section logos" aria-label="Highlights">
+      <div class="logo-strip">
+        <span class="logo-chip">AES-256</span>
+        <span class="logo-chip">No logs pitch</span>
+        <span class="logo-chip">Renew or cancel anytime</span>
+        <span class="logo-chip">Mini App checkout</span>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="section-head">
+        <h2 class="section-title">Everything you need</h2>
+        <p class="section-sub">Straightforward VPN inside Telegram — fewer tabs, faster to “on.”</p>
+      </div>
+      <div class="features">
+        <article class="feature card card-lift">
+          <div class="feature-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>Strong encryption</h3>
+          <p>Industry-standard tunneling so your traffic stays protected on untrusted networks.</p>
+        </article>
+        <article class="feature card card-lift">
+          <div class="feature-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <h3>Quick connect</h3>
+          <p>Open the bot, tap connect — designed for low friction on mobile.</p>
+        </article>
+        <article class="feature card card-lift">
+          <div class="feature-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M7 15h0M12 15h0M17 15h0"/></svg>
+          </div>
+          <h3>Plans that scale</h3>
+          <p>From weekly try-outs to yearly savings — pick what matches your travel or daily use.</p>
+        </article>
+        <article class="feature card card-lift">
+          <div class="feature-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+          </div>
+          <h3>Pay in Telegram</h3>
+          <p>Stars and card flows where supported — subscribe without leaving the chat.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section section-tight" id="pricing">
+      <div class="section-head">
+        <h2 class="section-title">Simple pricing</h2>
+        <p class="section-sub">All plans unlock the same VPN features — you choose the term.</p>
+      </div>
+      <div class="pricing">
+        <article class="price card card-lift">
+          <h3>Weekly</h3>
+          <p class="price-tag">$2.99<span>/week</span></p>
+          <p class="price-note">Short trips &amp; testing</p>
+          <ul class="price-list">
+            <li>Full VPN access</li>
+            <li>Renew anytime</li>
+          </ul>
+          <a class="btn btn-outline btn-block" href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">Choose weekly</a>
+        </article>
+        <article class="price card card-lift price-featured">
+          <span class="badge">Popular</span>
+          <h3>Monthly</h3>
+          <p class="price-tag">$9.99<span>/month</span></p>
+          <p class="price-note">Best for daily drivers</p>
+          <ul class="price-list">
+            <li>Full VPN access</li>
+            <li>Best value for regular use</li>
+          </ul>
+          <a class="btn btn-primary btn-block" href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">Choose monthly</a>
+        </article>
+        <article class="price card card-lift">
+          <h3>Yearly</h3>
+          <p class="price-tag">$99.99<span>/year</span></p>
+          <p class="price-note">Save vs monthly</p>
+          <ul class="price-list">
+            <li>Full VPN access</li>
+            <li>Lowest effective rate</li>
+          </ul>
+          <a class="btn btn-outline btn-block" href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">Choose yearly</a>
+        </article>
+      </div>
+      <p class="pricing-foot">Prices shown as examples — final amounts may vary by region and payment method inside Telegram.</p>
+    </section>
+
+    <section class="section" id="faq">
+      <div class="section-head">
+        <h2 class="section-title">FAQ</h2>
+        <p class="section-sub">Quick answers before you open the bot.</p>
+      </div>
+      <div class="faq">
+        <details class="faq-item card">
+          <summary>How do I subscribe?</summary>
+          <p>Open <a href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">@SenYuvpn_bot</a> in Telegram, start the mini app, and complete checkout there.</p>
+        </details>
+        <details class="faq-item card">
+          <summary>Which platforms are supported?</summary>
+          <p>The experience is built around Telegram’s mini app — use it on the devices where you run Telegram.</p>
+        </details>
+        <details class="faq-item card">
+          <summary>Can I cancel?</summary>
+          <p>Billing behavior depends on the payment method you used in Telegram — check your subscription status in-app or in Telegram’s payment settings.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img class="footer-logo" src="/logo.png" alt="" decoding="async" />
+        <p class="footer-tag">VPN inside Telegram. Stay sharp.</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://t.me/SenYuvpn_bot" target="_blank" rel="noopener noreferrer">Bot</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <p class="footer-copy">© <span id="y"></span> SY VPN. All rights reserved.</p>
+    </div>
+  </footer>
+  <script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
+</body>
 </html>
