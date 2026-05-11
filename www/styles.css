@@ -620,16 +620,17 @@ main {
 /* Pricing */
 .pricing {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
   align-items: stretch;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 700px) {
   .pricing {
     grid-template-columns: 1fr;
     max-width: 400px;
-    margin: 0 auto;
   }
 }
 
@@ -696,6 +697,12 @@ main {
   background: var(--accent-soft);
   color: var(--accent);
   border: 1px solid rgba(34, 211, 238, 0.35);
+}
+
+.badge-muted {
+  background: var(--purple-soft);
+  color: var(--purple);
+  border-color: rgba(167, 139, 250, 0.35);
 }
 
 .pricing-foot {
