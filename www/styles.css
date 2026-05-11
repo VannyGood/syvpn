@@ -18,7 +18,7 @@
   --radius-lg: 20px;
   --font: "DM Sans", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
-  --nav-h: 72px;
+  --nav-h: 88px;
 }
 
 *,
@@ -121,13 +121,13 @@ a:hover {
 }
 
 .brand-logo {
-  height: 36px;
+  height: clamp(44px, 5.5vw, 56px);
   width: auto;
-  max-width: min(200px, 42vw);
+  max-width: min(320px, 68vw);
   object-fit: contain;
   object-position: left center;
   display: block;
-  filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.15));
+  filter: drop-shadow(0 0 24px rgba(34, 211, 238, 0.22));
 }
 
 .nav-links {
@@ -776,8 +776,9 @@ main {
 }
 
 .footer-logo {
-  height: 28px;
+  height: clamp(40px, 5vw, 52px);
   width: auto;
+  max-width: min(280px, 85vw);
   object-fit: contain;
   object-position: left;
   opacity: 0.92;
