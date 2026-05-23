@@ -24,10 +24,12 @@ function formatDate(iso: string) {
   }
 }
 
+const WHISH_NUMBER = '+961 79 306 312';
+
 const depositAddresses: Record<PaymentMethod, { address: string; label: string }> = {
   ton: { address: 'UQAY0pUwY8fkhDqyqM8Ac2MKg7go4QLiqo1OtP836vBjmLbi', label: 'USDT on TON' },
   trc20: { address: 'TMVy2tQnWfJcatM1ttVrRypa1TuGu6VxQK', label: 'USDT on TRC20' },
-  whish: { address: '', label: 'Whish Money' },
+  whish: { address: WHISH_NUMBER, label: 'Whish Money' },
 };
 
 export function WalletView({ balance, onShowToast }: WalletViewProps) {
@@ -71,8 +73,9 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
 
   // Set a professional default "amount to send" per network.
   useEffect(() => {
-    if (!selectedMethod || selectedMethod === 'whish') return;
-    const defaultSend = selectedMethod === 'ton' ? 3.7 : 4.2;
+    if (!selectedMethod) return;
+    const defaultSend =
+      selectedMethod === 'ton' ? 3.7 : selectedMethod === 'trc20' ? 4.2 : 3;
     // If user hasn't typed a custom value, always update when switching networks.
     if (!amountTouched) setAmountInput(defaultSend.toFixed(2));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,7 +174,10 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
   const handleCopy = async (method: PaymentMethod, text: string) => {
     try {
       await copyText(text);
-      onShowToast('Address copied to clipboard!', 'success');
+      onShowToast(
+        method === 'whish' ? 'Whish number copied to clipboard!' : 'Address copied to clipboard!',
+        'success'
+      );
       // Ensure we always keep the selected payment method in sync with the copied address.
       setSelectedMethod(method);
       setPaidActionVisible(true);
@@ -191,22 +197,18 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
       return;
     }
 
-    if (selectedMethod === 'whish') {
-      onShowToast('Whish is coming soon.', 'info');
-      return;
-    }
-
     const sendAmount = amountValue;
     if (!Number.isFinite(sendAmount) || sendAmount <= 0) {
       onShowToast('Enter a valid amount to send (e.g. 4.20 USDT).', 'error');
       return;
     }
-    if (sendAmount <= networkFee) {
+    if (selectedMethod !== 'whish' && sendAmount <= networkFee) {
       onShowToast(`Amount must be greater than the network fee (${networkFee.toFixed(2)} USDT).`, 'error');
       return;
     }
 
-    const creditAmount = Math.max(0, sendAmount - networkFee);
+    const creditAmount =
+      selectedMethod === 'whish' ? sendAmount : Math.max(0, sendAmount - networkFee);
 
     // Immediate feedback so we can confirm the tap handler fires in mobile WebViews.
     onShowToast('Submitting payment…', 'info');
@@ -288,27 +290,19 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
           {([
             { id: 'ton' as PaymentMethod, label: 'TON', iconSrc: toncoinIcon, disabled: false, subtitle: 'USDT' },
             { id: 'trc20' as PaymentMethod, label: 'TRC20', iconSrc: trc20Icon, disabled: false, subtitle: 'USDT' },
-            { id: 'whish' as PaymentMethod, label: 'Whish', iconSrc: whishIcon, disabled: true },
+            { id: 'whish' as PaymentMethod, label: 'Whish', iconSrc: whishIcon, disabled: false, subtitle: 'USD' },
           ]).map((method) => (
             <GlassCard
               key={method.id}
-              onClick={
-                method.disabled
-                  ? () => onShowToast('Whish is coming soon.', 'info')
-                  : () => {
-                    const next = selectedMethod === method.id ? null : method.id;
-                    setSelectedMethod(next);
-                    setAmountTouched(false);
-                    setDepositAgreed(false);
-                    setPaidActionVisible(false);
-                  }
-              }
+              onClick={() => {
+                const next = selectedMethod === method.id ? null : method.id;
+                setSelectedMethod(next);
+                setAmountTouched(false);
+                setDepositAgreed(false);
+                setPaidActionVisible(false);
+              }}
               className={`text-center transition-all duration-200 ${
-                method.disabled
-                  ? 'opacity-40 pointer-events-none'
-                  : selectedMethod === method.id
-                    ? '!border-neon-blue/40 glow-blue'
-                    : ''
+                selectedMethod === method.id ? '!border-neon-blue/40 glow-blue' : ''
               }`}
             >
               <img
@@ -318,11 +312,8 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                 loading="lazy"
               />
               <p className="text-xs font-semibold text-white">{method.label}</p>
-              {!method.disabled && method.subtitle && (
+              {method.subtitle && (
                 <p className="text-[10px] text-gray-500 mt-0.5">{method.subtitle}</p>
-              )}
-              {method.disabled && (
-                <p className="text-[10px] text-gray-500 mt-0.5">Coming soon</p>
               )}
             </GlassCard>
           ))}
@@ -372,6 +363,22 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                   </div>
                 )}
 
+                {selectedMethod === 'whish' && (
+                  <div className="bg-dark-900/35 rounded-xl p-3 border border-white/10">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-300 font-medium">Will be credited</p>
+                      <p className="text-xs text-white font-semibold">
+                        {Number.isFinite(amountValue) && amountValue > 0
+                          ? `${amountValue.toFixed(2)} USD`
+                          : '—'}
+                      </p>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Send the exact amount via Whish. No network fee — full amount is credited after admin approval.
+                    </p>
+                  </div>
+                )}
+
                 {!depositAgreed ? (
                   <GlowButton
                     id="deposit-agree-btn"
@@ -384,12 +391,17 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                         onShowToast('Enter a valid amount to send (e.g. 4.20 USDT).', 'error');
                         return;
                       }
-                      if (sendAmount <= networkFee) {
+                      if (selectedMethod !== 'whish' && sendAmount <= networkFee) {
                         onShowToast(`Amount must be greater than the network fee (${networkFee.toFixed(2)} USDT).`, 'error');
                         return;
                       }
                       setDepositAgreed(true);
-                      onShowToast(`Send ${sendAmount.toFixed(2)} USDT on the selected network.`, 'info');
+                      onShowToast(
+                        selectedMethod === 'whish'
+                          ? `Send $${sendAmount.toFixed(2)} via Whish to ${WHISH_NUMBER}.`
+                          : `Send ${sendAmount.toFixed(2)} USDT on the selected network.`,
+                        'info'
+                      );
                     }}
                   >
                     I agree
@@ -397,11 +409,23 @@ export function WalletView({ balance, onShowToast }: WalletViewProps) {
                 ) : (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-400">
-                      Send{' '}
-                      <span className="text-gray-300 font-medium">
-                        {Number.isFinite(amountValue) ? `${amountValue.toFixed(2)} USDT` : 'USDT'}
-                      </span>{' '}
-                      to ({depositAddresses[selectedMethod].label}):
+                      {selectedMethod === 'whish' ? (
+                        <>
+                          Send{' '}
+                          <span className="text-gray-300 font-medium">
+                            {Number.isFinite(amountValue) ? `$${amountValue.toFixed(2)}` : 'USD'}
+                          </span>{' '}
+                          via Whish to this number:
+                        </>
+                      ) : (
+                        <>
+                          Send{' '}
+                          <span className="text-gray-300 font-medium">
+                            {Number.isFinite(amountValue) ? `${amountValue.toFixed(2)} USDT` : 'USDT'}
+                          </span>{' '}
+                          to ({depositAddresses[selectedMethod].label}):
+                        </>
+                      )}
                     </p>
                     <div className="flex items-center gap-2 bg-dark-900/50 rounded-xl p-3">
                       <code className="text-xs text-neon-blue flex-1 break-all font-mono">

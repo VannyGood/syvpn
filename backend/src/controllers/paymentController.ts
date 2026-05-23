@@ -36,18 +36,24 @@ export const iPaid = asyncHandler(async (req, res) => {
   const approveUrl = `${env.PUBLIC_BASE_URL}/backend/admin/transactions/approve?token=${encodeURIComponent(approvalToken)}`;
   const declineUrl = `${env.PUBLIC_BASE_URL}/backend/admin/transactions/decline?token=${encodeURIComponent(approvalToken)}`;
 
-  await notifyAdmin(
-    [
-      '💳 Payment pending approval',
-      `UserId: ${req.user.sub}`,
-      `TelegramId: ${req.user.telegramId}`,
-      `Amount: ${amount} ${currency}`,
-      `Transaction: ${tx.id}`,
-      '',
-      `Approve: ${approveUrl}`,
-      `Decline: ${declineUrl}`,
-    ].join('\n')
-  );
+  const WHISH_NUMBER = '+961 79 306 312';
+  const adminLines = [
+    '💳 Payment pending approval',
+    `UserId: ${req.user.sub}`,
+    `TelegramId: ${req.user.telegramId}`,
+    `Amount: ${amount} ${currency}`,
+    `Transaction: ${tx.id}`,
+  ];
+  if (currency === 'WHISH') {
+    adminLines.push(
+      `Method: Whish Money`,
+      `Whish number (send to): ${WHISH_NUMBER}`,
+      `Copy for user: ${WHISH_NUMBER}`
+    );
+  }
+  adminLines.push('', `Approve: ${approveUrl}`, `Decline: ${declineUrl}`);
+
+  await notifyAdmin(adminLines.join('\n'));
 
   console.log('[iPaid] ok', { txId: tx.id });
 
